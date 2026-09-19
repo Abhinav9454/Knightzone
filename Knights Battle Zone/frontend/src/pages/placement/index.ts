@@ -1,0 +1,10 @@
+export { default as PlacementAnalytics } from "./Analytics";
+export { default as PlacementApplicationTracker } from "./ApplicationTracker";
+export { default as PlacementCompanyDashboard } from "./CompanyDashboard";
+export { default as PlacementJobList } from "./JobList";
+export { default as PlacementJobPost } from "./JobPost";
+export { default as PlacementOnlineTest } from "./OnlineTest";
+export { default as PlacementResumeUpload } from "./ResumeUpload";
+export { default as PlacementStudentDashboard } from "./StudentDashboard";
+export { default as StudentDashboard } from "./StudentDashboard";
+export { default as PlacementTPODashboard } from "./TPODashboard";

@@ -1,0 +1,116 @@
+name: Frontend Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Run TypeScript type checking
+        working-directory: ./frontend
+        run: npx tsc --noEmit
+
+      - name: Run ESLint
+        working-directory: ./frontend
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: ./frontend
+        continue-on-error: true
+        run: npm run test
+
+      - name: Build for production
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/dist/
+          retention-days: 5
+
+      - name: Check bundle size
+        working-directory: ./frontend
+        run: |
+          TOTAL_SIZE=$(du -sh dist/ | cut -f1)
+          echo "Build Size: $TOTAL_SIZE"
+          du -sh dist/* | sort -h
+
+      - name: Build Docker image
+        if: matrix.node-version == '20.x'
+        run: |
+          docker build -t frontend:latest ./frontend
+          docker build -f ./frontend/Dockerfile.prod -t frontend:prod-latest ./frontend
+
+  quality-checks:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Run TypeScript compiler
+        working-directory: ./frontend
+        run: npx tsc --noEmit --pretty
+
+      - name: Check for unused dependencies
+        working-directory: ./frontend
+        continue-on-error: true
+        run: npx depcheck --ignore=@types/node,vite
+
+      - name: Generate SBOM
+        continue-on-error: true
+        run: npm sbom --output=frontend-sbom.json
+
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: frontend-sbom.json
+          retention-days: 30

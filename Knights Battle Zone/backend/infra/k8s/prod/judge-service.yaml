@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: contest-judge
+  labels:
+    app: contest-judge
+spec:
+  selector:
+    app: contest-judge
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+  type: ClusterIP
+

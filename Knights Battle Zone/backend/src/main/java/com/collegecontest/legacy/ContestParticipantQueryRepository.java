@@ -1,0 +1,19 @@
+package com.collegecontest.legacy;
+
+import com.collegecontest.model.ContestParticipant;
+import com.collegecontest.model.ContestParticipantId;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ContestParticipantQueryRepository extends CrudRepository<ContestParticipant, ContestParticipantId> {
+    @Query(value = "SELECT DISTINCT user_id FROM contest_participants", nativeQuery = true)
+    List<Long> findDistinctUserIds();
+
+    @Query(value = "SELECT c.end_date as endDate, cp.total_score as totalScore FROM contest_participants cp JOIN contests c ON cp.contest_id = c.id WHERE cp.user_id = :userId", nativeQuery = true)
+    List<Object[]> findByUserIdRaw(@Param("userId") Long userId);
+}

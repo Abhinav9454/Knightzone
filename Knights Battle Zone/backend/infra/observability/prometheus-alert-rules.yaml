@@ -1,0 +1,173 @@
+﻿apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: knights-battle-zone-alert-rules
+  namespace: production
+spec:
+  groups:
+    - name: knights-battle-zone-slo
+      rules:
+        - alert: BackendHighP95Latency
+          expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job="contest-backend",uri!~".*actuator.*"}[5m])) by (le)) > 0.35
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Backend p95 latency above 350ms
+            description: Backend p95 latency breached for 10 minutes.
+
+        - alert: BackendHighP99Latency
+          expr: histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job="contest-backend",uri!~".*actuator.*"}[5m])) by (le)) > 0.9
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Backend p99 latency above 900ms
+            description: Backend p99 latency breached for 10 minutes.
+
+        - alert: BackendHigh5xxRate
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{job="contest-backend",status=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(http_server_requests_seconds_count{job="contest-backend"}[5m])), 1)
+            ) > 0.005
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Backend 5xx error rate above 0.5%
+            description: 5xx rate breached SLO budget.
+
+        - alert: JudgeQueueBacklogHigh
+          expr: sum(rabbitmq_queue_messages_ready{queue=~"submission\\.queue\\.submit|submission\\.queue\\.run|submission\\.queue\\.high"}) > 300
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Judge queue backlog high
+            description: Combined judge shard queue backlog above 300 for 10 minutes.
+
+        - alert: JudgeQueueBacklogCritical
+          expr: sum(rabbitmq_queue_messages_ready{queue=~"submission\\.queue\\.submit|submission\\.queue\\.run|submission\\.queue\\.high"}) > 800
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Judge queue backlog critical
+            description: Combined judge shard queue backlog above 800 for 5 minutes.
+
+        - alert: JudgeSubmitLaneBacklogHigh
+          expr: rabbitmq_queue_messages_ready{queue="submission.queue.submit"} > 220
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Judge submit lane backlog high
+            description: submission.queue.submit backlog is above 220 for 5 minutes.
+
+        - alert: JudgeRunLaneBacklogHigh
+          expr: rabbitmq_queue_messages_ready{queue="submission.queue.run"} > 90
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Judge run lane backlog high
+            description: submission.queue.run backlog is above 90 for 5 minutes.
+
+        - alert: JudgeHighPriorityLaneBacklogCritical
+          expr: rabbitmq_queue_messages_ready{queue="submission.queue.high"} > 45
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Judge high-priority lane backlog critical
+            description: submission.queue.high backlog is above 45 for 2 minutes.
+
+        - alert: JudgeConsumersZero
+          expr: rabbitmq_queue_consumers{queue="submission.queue.submit"} < 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Judge queue has no active consumers
+            description: submission.queue.submit consumer count dropped to zero.
+
+        - alert: JudgeFailureRateHigh
+          expr: sum(rate(judge_queue_submission_failures_total[5m])) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Judge failure rate high
+            description: judge queue failure counter indicates sustained execution failures.
+
+        - alert: JudgeVerdictLatencyP95High
+          expr: histogram_quantile(0.95, sum(rate(judge_queue_submission_duration_seconds_bucket{status!~"PENDING|RUNNING"}[5m])) by (le)) > 12
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Judge verdict latency p95 high
+            description: Judge verdict pipeline p95 exceeded 12 seconds for 10 minutes.
+
+        - alert: JudgeVerdictLatencyP99Critical
+          expr: histogram_quantile(0.99, sum(rate(judge_queue_submission_duration_seconds_bucket{status!~"PENDING|RUNNING"}[5m])) by (le)) > 20
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Judge verdict latency p99 critical
+            description: Judge verdict pipeline p99 exceeded 20 seconds for 5 minutes.
+
+        - alert: JudgeRunLaneConsumersZero
+          expr: rabbitmq_queue_consumers{queue="submission.queue.run"} < 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Judge run lane has no active consumers
+            description: submission.queue.run consumer count dropped to zero.
+
+        - alert: JudgeHighLaneConsumersZero
+          expr: rabbitmq_queue_consumers{queue="submission.queue.high"} < 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Judge high-priority lane has no active consumers
+            description: submission.queue.high consumer count dropped to zero.
+
+        - alert: BackendSLOErrorBudgetBurnFast
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{job="contest-backend",status=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(http_server_requests_seconds_count{job="contest-backend"}[5m])), 1)
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Backend error budget burning too fast
+            description: Backend 5xx ratio exceeded 1% for 5 minutes.
+
+        - alert: AuthEndpoint5xxSpike
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="contest-backend",uri=~"/api/auth/.*",status=~"5.."}[5m])) > 0.2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Auth endpoint 5xx spike
+            description: Authentication APIs are seeing elevated 5xx rates.
+
+        - alert: PodRestartBurst
+          expr: increase(kube_pod_container_status_restarts_total{namespace="production"}[15m]) >= 3
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: Pod restart burst detected
+            description: At least one container restarted 3+ times within 15 minutes.
+

@@ -1,0 +1,21 @@
+# Build output
+target/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS / logs
+.DS_Store
+*.log
+hs_err_pid*
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Local tooling overrides
+settings.xml.disabled

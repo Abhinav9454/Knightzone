@@ -1,0 +1,31 @@
+name: go-live-gate-50k
+
+on:
+  workflow_dispatch:
+    inputs:
+      results_dir:
+        description: Path to k6 summary files
+        required: true
+        default: backend/scripts/loadtest/results
+      require_all:
+        description: Require all 4 scenarios
+        required: true
+        default: "true"
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run go-live gate
+        run: |
+          node backend/scripts/ops/go_live_gate_50k.js \
+            --results-dir "${{ inputs.results_dir }}" \
+            --require-all "${{ inputs.require_all }}"

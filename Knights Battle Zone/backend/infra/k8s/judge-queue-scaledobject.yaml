@@ -1,0 +1,57 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: contest-judge-queue-scaler
+  namespace: production
+spec:
+  scaleTargetRef:
+    name: contest-judge
+  pollingInterval: 5
+  cooldownPeriod: 90
+  minReplicaCount: 6
+  maxReplicaCount: 120
+  fallback:
+    failureThreshold: 3
+    replicas: 10
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 20
+          selectPolicy: Max
+          policies:
+            - type: Pods
+              value: 20
+              periodSeconds: 30
+            - type: Percent
+              value: 200
+              periodSeconds: 30
+        scaleDown:
+          stabilizationWindowSeconds: 180
+          selectPolicy: Max
+          policies:
+            - type: Percent
+              value: 20
+              periodSeconds: 60
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: submission.queue.submit
+        mode: QueueLength
+        value: "200"
+        hostFromEnv: KEDA_RABBITMQ_HOST
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: submission.queue.run
+        mode: QueueLength
+        value: "80"
+        hostFromEnv: KEDA_RABBITMQ_HOST
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: submission.queue.high
+        mode: QueueLength
+        value: "40"
+        hostFromEnv: KEDA_RABBITMQ_HOST

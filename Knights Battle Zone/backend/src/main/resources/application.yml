@@ -1,0 +1,213 @@
+spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  main:
+    allow-bean-definition-overriding: true
+  # Active profile can be set via the environment variable SPRING_PROFILES_ACTIVE
+  # Example: export SPRING_PROFILES_ACTIVE=prod
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/Unified_database?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:unified_code_db}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  redis:
+    host: localhost
+    port: 6379
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    validate-on-migrate: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION_MS:1209600000}
+
+# Common non-sensitive app settings
+server:
+  port: ${PORT:${SERVER_PORT:8080}}
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/octet-stream
+    min-response-size: 1024
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
+
+websocket:
+  broker:
+    relay-enabled: ${WS_BROKER_RELAY_ENABLED:false}
+    relay-host: ${WS_BROKER_RELAY_HOST:localhost}
+    relay-port: ${WS_BROKER_RELAY_PORT:61613}
+    client-login: ${WS_BROKER_CLIENT_LOGIN:guest}
+    client-passcode: ${WS_BROKER_CLIENT_PASSCODE:guest}
+    system-login: ${WS_BROKER_SYSTEM_LOGIN:guest}
+    system-passcode: ${WS_BROKER_SYSTEM_PASSCODE:guest}
+    virtual-host: ${WS_BROKER_VHOST:/}
+    destination-prefixes: ${WS_BROKER_DESTINATION_PREFIXES:/topic,/queue}
+    simple-heartbeat-send-ms: ${WS_SIMPLE_HEARTBEAT_SEND_MS:10000}
+    simple-heartbeat-receive-ms: ${WS_SIMPLE_HEARTBEAT_RECEIVE_MS:10000}
+    relay-system-heartbeat-send-ms: ${WS_RELAY_HEARTBEAT_SEND_MS:10000}
+    relay-system-heartbeat-receive-ms: ${WS_RELAY_HEARTBEAT_RECEIVE_MS:10000}
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:false}
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+    url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
+    temperature: ${OPENAI_TEMPERATURE:0.7}
+
+ai:
+  usage:
+    cooldown-hours: ${AI_USAGE_COOLDOWN_HOURS:24}
+
+app:
+  db-routing:
+    enabled: ${APP_DB_ROUTING_ENABLED:false}
+    read-only-transactions-only: ${APP_DB_ROUTING_READ_ONLY_TX_ONLY:true}
+  bootstrap-admin:
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+    super-admin-email: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:}
+    super-admin-password: ${BOOTSTRAP_SUPER_ADMIN_PASSWORD:}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+
+tracker:
+  sync:
+    cron: ${TRACKER_SYNC_CRON:0 0 2 * * ?}
+  token:
+    secret: ${TRACKER_TOKEN_SECRET}
+  leetcode:
+    url: ${TRACKER_LEETCODE_URL:https://leetcode.com/graphql}
+
+judge:
+  auth:
+    token: ${JUDGE_INTERNAL_TOKEN}
+  service:
+    url: ${JUDGE_SERVICE_URL:http://localhost:${PORT:${SERVER_PORT:8080}}/api}
+  docker:
+    enabled: ${JUDGE_DOCKER_ENABLED:true}
+    pull-on-demand: ${JUDGE_DOCKER_PULL_ON_DEMAND:false}
+  async:
+    enabled: ${JUDGE_ASYNC_ENABLED:false}
+    legacy-fallback-enabled: ${JUDGE_ASYNC_LEGACY_FALLBACK_ENABLED:true}
+    non-blocking-enabled: ${JUDGE_ASYNC_NON_BLOCKING_ENABLED:true}
+  poll:
+    interval-ms: ${JUDGE_POLL_INTERVAL_MS:150}
+    timeout-ms: ${JUDGE_POLL_TIMEOUT_MS:8000}
+  retry:
+    max-attempts: ${JUDGE_RETRY_MAX_ATTEMPTS:2}
+    delay-ms: ${JUDGE_RETRY_DELAY_MS:120}
+  circuit:
+    failure-threshold: ${JUDGE_CIRCUIT_FAILURE_THRESHOLD:4}
+    open-ms: ${JUDGE_CIRCUIT_OPEN_MS:6000}
+  execution:
+    memory-mb: ${JUDGE_EXECUTION_MEMORY_MB:256}
+    cpus: ${JUDGE_EXECUTION_CPUS:1.0}
+    time-limit-floor-seconds: ${JUDGE_EXECUTION_TIME_LIMIT_FLOOR_SECONDS:2}
+  queue:
+    name: ${JUDGE_QUEUE_NAME:submission.queue.submit}
+    backlog-warn-threshold: ${JUDGE_QUEUE_BACKLOG_WARN_THRESHOLD:150}
+    retry-interval-ms: ${JUDGE_QUEUE_RETRY_INTERVAL_MS:1000}
+    retry-batch-size: ${JUDGE_QUEUE_RETRY_BATCH_SIZE:50}
+    high-priority-window-seconds: ${JUDGE_QUEUE_HIGH_PRIORITY_WINDOW_SECONDS:300}
+    poll-legacy-status-enabled: ${JUDGE_QUEUE_POLL_LEGACY_STATUS_ENABLED:false}
+  events:
+    result-consumer-enabled: ${JUDGE_EVENTS_RESULT_CONSUMER_ENABLED:true}
+    result-queue: ${JUDGE_RESULT_QUEUE_NAME:submission.result.queue}
+    result-listener-concurrency: ${JUDGE_RESULT_LISTENER_CONCURRENCY:2-8}
+  run:
+    prefer-legacy: ${JUDGE_RUN_PREFER_LEGACY:true}
+    max-attempts: ${JUDGE_RUN_MAX_ATTEMPTS:1}
+    async-fallback-enabled: ${JUDGE_RUN_ASYNC_FALLBACK_ENABLED:false}
+    poll-timeout-ms: ${JUDGE_RUN_POLL_TIMEOUT_MS:2500}
+    compile-grace-seconds: ${JUDGE_RUN_COMPILE_GRACE_SECONDS:4}
+  testcase:
+    cache-ttl-ms: ${JUDGE_TESTCASE_CACHE_TTL_MS:900000}
+
+resume:
+  parser:
+    url: ${RESUME_PARSER_URL:}
+
+rate-limit:
+  storage: ${RATE_LIMIT_STORAGE:redis}
+  redis-prefix: ${RATE_LIMIT_REDIS_PREFIX:rate-limit}
+  redis-window-seconds: ${RATE_LIMIT_REDIS_WINDOW_SECONDS:60}
+  auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:12}
+  write-per-minute: ${RATE_LIMIT_WRITE_PER_MINUTE:25}
+  read-per-minute: ${RATE_LIMIT_READ_PER_MINUTE:600}
+  max-buckets: ${RATE_LIMIT_MAX_BUCKETS:20000}
+  idle-bucket-ttl-minutes: ${RATE_LIMIT_IDLE_BUCKET_TTL_MINUTES:30}
+  trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:127.0.0.1,::1}
+
+idempotency:
+  enabled: ${IDEMPOTENCY_ENABLED:true}
+  storage: ${IDEMPOTENCY_STORAGE:auto}
+  ttl-seconds: ${IDEMPOTENCY_TTL_SECONDS:300}
+  lock-seconds: ${IDEMPOTENCY_LOCK_SECONDS:30}
+  wait-ms: ${IDEMPOTENCY_WAIT_MS:1200}
+
+leaderboard:
+  snapshot:
+    enabled: ${LEADERBOARD_SNAPSHOT_ENABLED:true}
+    contest-freshness-seconds: ${LEADERBOARD_SNAPSHOT_CONTEST_FRESHNESS_SECONDS:90}
+    first-solver-freshness-seconds: ${LEADERBOARD_SNAPSHOT_FIRST_SOLVER_FRESHNESS_SECONDS:180}
+    refresh-hot-contests-enabled: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_ENABLED:true}
+    refresh-hot-contests-fixed-delay-ms: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_FIXED_DELAY_MS:180000}
+    refresh-hot-contests-lookback-days: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_LOOKBACK_DAYS:30}
+    refresh-hot-contests-limit: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_LIMIT:80}
+
+submission:
+  history:
+    archive:
+      enabled: ${SUBMISSION_HISTORY_ARCHIVE_ENABLED:false}
+      retention-days: ${SUBMISSION_HISTORY_RETENTION_DAYS:90}
+      batch-size: ${SUBMISSION_HISTORY_ARCHIVE_BATCH_SIZE:2500}
+      max-batches-per-run: ${SUBMISSION_HISTORY_ARCHIVE_MAX_BATCHES_PER_RUN:4}
+      cron: ${SUBMISSION_HISTORY_ARCHIVE_CRON:0 20 3 * * ?}
+
+logging:
+  level:
+    com.collegecontest: INFO
+    org.springframework.web.socket.config.WebSocketMessageBrokerStats: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    export:
+      prometheus:
+        enabled: true

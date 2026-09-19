@@ -1,0 +1,60 @@
+name: Loadtest Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "backend/scripts/loadtest/**"
+      - ".github/workflows/loadtest-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  k6-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if staging target/token is not configured
+        id: precheck
+        env:
+          BASE_URL: ${{ secrets.LOADTEST_BASE_URL }}
+          TOKEN: ${{ secrets.LOADTEST_TOKEN }}
+        run: |
+          if [ -z "${BASE_URL}" ] || [ -z "${TOKEN}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "LOADTEST_BASE_URL/LOADTEST_TOKEN secrets not configured. Skipping smoke run."
+            exit 0
+          fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Run platform baseline smoke (short profile)
+        if: steps.precheck.outputs.configured == 'true'
+        env:
+          BASE_URL: ${{ secrets.LOADTEST_BASE_URL }}
+          TOKEN: ${{ secrets.LOADTEST_TOKEN }}
+        run: |
+          mkdir -p backend/scripts/loadtest/results
+          docker run --rm -i \
+            -e BASE_URL="${BASE_URL}" \
+            -e LOADTEST_TOKEN="${TOKEN}" \
+            -e BASELINE_STAGE_1_DURATION="30s" \
+            -e BASELINE_STAGE_2_DURATION="45s" \
+            -e BASELINE_STAGE_3_DURATION="15s" \
+            -e BASELINE_STAGE_1_TARGET="20" \
+            -e BASELINE_STAGE_2_TARGET="40" \
+            -e REQUEST_TIMEOUT="25s" \
+            -e K6_SUMMARY_EXPORT=/results/summary.json \
+            -v "${PWD}/backend/scripts/loadtest/k6:/scripts" \
+            -v "${PWD}/backend/scripts/loadtest/results:/results" \
+            grafana/k6 run /scripts/platform_baseline.js
+
+      - name: Upload k6 summary
+        if: always() && steps.precheck.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadtest-smoke-summary
+          path: backend/scripts/loadtest/results/summary.json

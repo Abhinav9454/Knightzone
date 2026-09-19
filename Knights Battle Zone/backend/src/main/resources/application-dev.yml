@@ -1,0 +1,46 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: ${DEV_DB_URL:jdbc:mysql://localhost:3306/contestdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${DEV_DB_USER:contestuser}
+    password: ${DEV_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+  refresh-expiration: 1209600000
+
+# dev-specific logging level
+logging:
+  level:
+    com.collegecontest: INFO
+    org.springframework.web.socket.config.WebSocketMessageBrokerStats: WARN
+
+app:
+  security:
+    allow-dev-profile: true

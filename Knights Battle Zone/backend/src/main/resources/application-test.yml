@@ -1,0 +1,48 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  flyway:
+    enabled: false
+
+  datasource:
+    # Default to in-memory H2 for tests; can be overridden with TEST_DB_URL
+    url: ${TEST_DB_URL:jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1}
+    username: ${TEST_DB_USER:sa}
+    password: ${TEST_DB_PASSWORD:}
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  sql:
+    init:
+      mode: never
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+
+jwt:
+  secret: ${TEST_JWT_SECRET:testSecret}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
+
+tracker:
+  token:
+    secret: ${TEST_TRACKER_TOKEN_SECRET:test-tracker-token-secret-minimum-32-chars}
+
+judge:
+  auth:
+    token: ${TEST_JUDGE_INTERNAL_TOKEN:test-judge-internal-token-minimum-32-chars}
+
+logging:
+  level:
+    com.collegecontest: INFO

@@ -1,0 +1,186 @@
+﻿{
+  "title": "Knights Battle Zone - Backend & Judge",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Backend Request Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"contest-backend\",uri!~\".*actuator.*\"}[1m]))",
+          "legendFormat": "req/s"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Backend p95 Latency (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"contest-backend\",uri!~\".*actuator.*\"}[5m])) by (le)) * 1000",
+          "legendFormat": "p95 ms"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Judge Queue Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "rabbitmq_queue_messages_ready{queue=~\"submission\\\\.queue\\\\.submit|submission\\\\.queue\\\\.run|submission\\\\.queue\\\\.high\"}",
+          "legendFormat": "{{queue}} ready"
+        },
+        {
+          "expr": "rabbitmq_queue_messages_unacknowledged{queue=~\"submission\\\\.queue\\\\.submit|submission\\\\.queue\\\\.run|submission\\\\.queue\\\\.high\"}",
+          "legendFormat": "{{queue}} unacked"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Judge Pod CPU",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"production\",pod=~\"contest-judge.*\",container!=\"POD\"}[1m]))",
+          "legendFormat": "judge cpu cores"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Backend 5xx Rate (%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "(sum(rate(http_server_requests_seconds_count{job=\"contest-backend\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"contest-backend\"}[5m])),1)) * 100",
+          "legendFormat": "5xx %"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Judge Failure Counter Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(judge_queue_submission_failures_total[5m]))",
+          "legendFormat": "failures/sec"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Judge Verdict Latency (p95/p99)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(judge_queue_submission_duration_seconds_bucket{status!~\"PENDING|RUNNING\"}[5m])) by (le))",
+          "legendFormat": "p95 sec"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(judge_queue_submission_duration_seconds_bucket{status!~\"PENDING|RUNNING\"}[5m])) by (le))",
+          "legendFormat": "p99 sec"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Judge Lane Consumers",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "rabbitmq_queue_consumers{queue=~\"submission\\\\.queue\\\\.submit|submission\\\\.queue\\\\.run|submission\\\\.queue\\\\.high\"}",
+          "legendFormat": "{{queue}} consumers"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      }
+    }
+  ]
+}
+

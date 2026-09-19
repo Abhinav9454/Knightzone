@@ -1,0 +1,158 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    # Production must provide these environment variables
+    # Prefer DB proxy endpoint (RDS Proxy / ProxySQL) in DB_URL.
+    url: ${DB_URL:${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/Unified_database?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}}
+    username: ${DB_USER:${SPRING_DATASOURCE_USERNAME:unified_code_db}}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: unifiedCodeProdPool
+      maximum-pool-size: ${DB_HIKARI_MAX_POOL_SIZE:60}
+      minimum-idle: ${DB_HIKARI_MIN_IDLE:20}
+      idle-timeout: ${DB_HIKARI_IDLE_TIMEOUT_MS:180000}
+      max-lifetime: ${DB_HIKARI_MAX_LIFETIME_MS:1500000}
+      connection-timeout: ${DB_HIKARI_CONNECTION_TIMEOUT_MS:2000}
+      validation-timeout: ${DB_HIKARI_VALIDATION_TIMEOUT_MS:1000}
+      keepalive-time: ${DB_HIKARI_KEEPALIVE_MS:300000}
+      leak-detection-threshold: ${DB_HIKARI_LEAK_DETECTION_MS:30000}
+      initialization-fail-timeout: ${DB_HIKARI_INIT_FAIL_TIMEOUT_MS:1}
+      register-mbeans: true
+
+  # Optional read replica metadata for future read/write routing.
+  # Populate these when enabling routing datasource layer.
+  datasource-read:
+    enabled: ${DB_READ_REPLICA_ENABLED:false}
+    url: ${DB_READ_REPLICA_URL:}
+    username: ${DB_READ_REPLICA_USER:}
+    password: ${DB_READ_REPLICA_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: unifiedCodeReadReplicaPool
+      maximum-pool-size: ${DB_READ_HIKARI_MAX_POOL_SIZE:45}
+      minimum-idle: ${DB_READ_HIKARI_MIN_IDLE:10}
+      idle-timeout: ${DB_READ_HIKARI_IDLE_TIMEOUT_MS:180000}
+      max-lifetime: ${DB_READ_HIKARI_MAX_LIFETIME_MS:1500000}
+      connection-timeout: ${DB_READ_HIKARI_CONNECTION_TIMEOUT_MS:2000}
+      validation-timeout: ${DB_READ_HIKARI_VALIDATION_TIMEOUT_MS:1000}
+      keepalive-time: ${DB_READ_HIKARI_KEEPALIVE_MS:300000}
+      leak-detection-threshold: ${DB_READ_HIKARI_LEAK_DETECTION_MS:30000}
+      initialization-fail-timeout: ${DB_READ_HIKARI_INIT_FAIL_TIMEOUT_MS:1}
+      register-mbeans: true
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+app:
+  security:
+    require-https: ${APP_SECURITY_REQUIRE_HTTPS:true}
+  db-routing:
+    enabled: ${APP_DB_ROUTING_ENABLED:false}
+    read-only-transactions-only: ${APP_DB_ROUTING_READ_ONLY_TX_ONLY:true}
+  bootstrap-admin:
+    enabled: false
+
+websocket:
+  broker:
+    relay-enabled: ${WS_BROKER_RELAY_ENABLED:false}
+    relay-host: ${WS_BROKER_RELAY_HOST:rabbitmq}
+    relay-port: ${WS_BROKER_RELAY_PORT:61613}
+    client-login: ${WS_BROKER_CLIENT_LOGIN:guest}
+    client-passcode: ${WS_BROKER_CLIENT_PASSCODE:guest}
+    system-login: ${WS_BROKER_SYSTEM_LOGIN:guest}
+    system-passcode: ${WS_BROKER_SYSTEM_PASSCODE:guest}
+    virtual-host: ${WS_BROKER_VHOST:/}
+    destination-prefixes: ${WS_BROKER_DESTINATION_PREFIXES:/topic,/queue}
+    simple-heartbeat-send-ms: ${WS_SIMPLE_HEARTBEAT_SEND_MS:10000}
+    simple-heartbeat-receive-ms: ${WS_SIMPLE_HEARTBEAT_RECEIVE_MS:10000}
+    relay-system-heartbeat-send-ms: ${WS_RELAY_HEARTBEAT_SEND_MS:10000}
+    relay-system-heartbeat-receive-ms: ${WS_RELAY_HEARTBEAT_RECEIVE_MS:10000}
+
+judge:
+  async:
+    enabled: ${JUDGE_ASYNC_ENABLED:true}
+    legacy-fallback-enabled: ${JUDGE_ASYNC_LEGACY_FALLBACK_ENABLED:false}
+    non-blocking-enabled: ${JUDGE_ASYNC_NON_BLOCKING_ENABLED:true}
+  poll:
+    interval-ms: ${JUDGE_POLL_INTERVAL_MS:120}
+    timeout-ms: ${JUDGE_POLL_TIMEOUT_MS:1500}
+  retry:
+    max-attempts: ${JUDGE_RETRY_MAX_ATTEMPTS:2}
+    delay-ms: ${JUDGE_RETRY_DELAY_MS:100}
+  queue:
+    name: ${JUDGE_QUEUE_NAME:submission.queue.submit}
+    backlog-warn-threshold: ${JUDGE_QUEUE_BACKLOG_WARN_THRESHOLD:400}
+    retry-interval-ms: ${JUDGE_QUEUE_RETRY_INTERVAL_MS:700}
+    retry-batch-size: ${JUDGE_QUEUE_RETRY_BATCH_SIZE:200}
+    high-priority-window-seconds: ${JUDGE_QUEUE_HIGH_PRIORITY_WINDOW_SECONDS:240}
+    poll-legacy-status-enabled: ${JUDGE_QUEUE_POLL_LEGACY_STATUS_ENABLED:false}
+  events:
+    result-consumer-enabled: ${JUDGE_EVENTS_RESULT_CONSUMER_ENABLED:true}
+    result-queue: ${JUDGE_RESULT_QUEUE_NAME:submission.result.queue}
+    result-listener-concurrency: ${JUDGE_RESULT_LISTENER_CONCURRENCY:4-16}
+  run:
+    prefer-legacy: ${JUDGE_RUN_PREFER_LEGACY:true}
+    max-attempts: ${JUDGE_RUN_MAX_ATTEMPTS:1}
+    async-fallback-enabled: ${JUDGE_RUN_ASYNC_FALLBACK_ENABLED:false}
+    poll-timeout-ms: ${JUDGE_RUN_POLL_TIMEOUT_MS:1200}
+    compile-grace-seconds: ${JUDGE_RUN_COMPILE_GRACE_SECONDS:5}
+  testcase:
+    cache-ttl-ms: ${JUDGE_TESTCASE_CACHE_TTL_MS:1800000}
+
+rate-limit:
+  storage: ${RATE_LIMIT_STORAGE:redis}
+  redis-window-seconds: ${RATE_LIMIT_REDIS_WINDOW_SECONDS:60}
+  trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:127.0.0.1,::1}
+  auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:8}
+  write-per-minute: ${RATE_LIMIT_WRITE_PER_MINUTE:35}
+  read-per-minute: ${RATE_LIMIT_READ_PER_MINUTE:1200}
+
+idempotency:
+  enabled: ${IDEMPOTENCY_ENABLED:true}
+  storage: ${IDEMPOTENCY_STORAGE:redis}
+  ttl-seconds: ${IDEMPOTENCY_TTL_SECONDS:600}
+  lock-seconds: ${IDEMPOTENCY_LOCK_SECONDS:45}
+  wait-ms: ${IDEMPOTENCY_WAIT_MS:1800}
+
+leaderboard:
+  snapshot:
+    enabled: ${LEADERBOARD_SNAPSHOT_ENABLED:true}
+    contest-freshness-seconds: ${LEADERBOARD_SNAPSHOT_CONTEST_FRESHNESS_SECONDS:60}
+    first-solver-freshness-seconds: ${LEADERBOARD_SNAPSHOT_FIRST_SOLVER_FRESHNESS_SECONDS:120}
+    refresh-hot-contests-enabled: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_ENABLED:true}
+    refresh-hot-contests-fixed-delay-ms: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_FIXED_DELAY_MS:120000}
+    refresh-hot-contests-lookback-days: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_LOOKBACK_DAYS:45}
+    refresh-hot-contests-limit: ${LEADERBOARD_SNAPSHOT_REFRESH_HOT_CONTESTS_LIMIT:150}
+
+submission:
+  history:
+    archive:
+      enabled: ${SUBMISSION_HISTORY_ARCHIVE_ENABLED:true}
+      retention-days: ${SUBMISSION_HISTORY_RETENTION_DAYS:120}
+      batch-size: ${SUBMISSION_HISTORY_ARCHIVE_BATCH_SIZE:5000}
+      max-batches-per-run: ${SUBMISSION_HISTORY_ARCHIVE_MAX_BATCHES_PER_RUN:8}
+      cron: ${SUBMISSION_HISTORY_ARCHIVE_CRON:0 30 3 * * ?}
+
+logging:
+  level:
+    root: INFO
+    com.collegecontest: INFO

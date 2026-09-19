@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+judge:
+  docker:
+    pull-on-demand: true
+  queue:
+    listener-concurrency: 1
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  security:
+    allow-dev-profile: true

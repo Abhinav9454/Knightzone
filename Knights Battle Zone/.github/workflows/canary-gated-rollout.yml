@@ -1,0 +1,73 @@
+name: canary-gated-rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: Kubernetes namespace
+        required: true
+        default: production
+      deployment:
+        description: Deployment name (for example: contest-backend)
+        required: true
+      container:
+        description: Container name inside deployment
+        required: true
+      image:
+        description: Full image reference (repo/name:tag)
+        required: true
+      rollout_timeout:
+        description: Rollout timeout (for example: 180s)
+        required: true
+        default: 180s
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate kube config secret
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -z "$KUBE_CONFIG" ]; then
+            echo "KUBE_CONFIG secret is not configured. Skipping rollout."
+            exit 0
+          fi
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Write kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Apply canary-gated update
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+          DEPLOYMENT: ${{ inputs.deployment }}
+          CONTAINER: ${{ inputs.container }}
+          IMAGE: ${{ inputs.image }}
+          TIMEOUT: ${{ inputs.rollout_timeout }}
+        run: |
+          set -euo pipefail
+          kubectl -n "$NAMESPACE" set image "deployment/$DEPLOYMENT" "$CONTAINER=$IMAGE"
+          if ! kubectl -n "$NAMESPACE" rollout status "deployment/$DEPLOYMENT" --timeout="$TIMEOUT"; then
+            echo "Rollout failed. Reverting deployment."
+            kubectl -n "$NAMESPACE" rollout undo "deployment/$DEPLOYMENT"
+            kubectl -n "$NAMESPACE" rollout status "deployment/$DEPLOYMENT" --timeout="$TIMEOUT"
+            exit 1
+          fi
+
+      - name: Post rollout summary
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+          DEPLOYMENT: ${{ inputs.deployment }}
+        run: |
+          kubectl -n "$NAMESPACE" get deployment "$DEPLOYMENT" -o wide
