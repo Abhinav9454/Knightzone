@@ -15,3 +15,15 @@ body {
   background: #07070b;
   font-family: Inter, system-ui, sans-serif;
 }
+
+/* Hide scrollbar everywhere requested while preserving smooth scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}

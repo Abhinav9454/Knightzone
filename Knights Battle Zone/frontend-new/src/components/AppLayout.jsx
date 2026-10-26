@@ -78,7 +78,7 @@ const AppLayout = () => {
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
           />
 
-          <nav className="fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-64px)] overflow-y-auto border-b border-[#e4e5df] bg-[#fbfcf9] p-4 shadow-xl lg:hidden">
+          <nav className="fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-64px)] overflow-y-auto border-b border-[#e4e5df] bg-[#fbfcf9] p-4 shadow-xl lg:hidden no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <p className="mb-3 px-3 text-[10px] font-bold tracking-[0.18em] text-[#92998f]">
               ARENA NAVIGATION
             </p>

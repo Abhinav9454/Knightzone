@@ -61,7 +61,7 @@ const Sidebar = () => {
     <aside
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#e4e5df] bg-[#fbfcf9] text-[#252922] transition-all duration-300 ease-in-out lg:flex ${
+      className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#e4e5df] bg-[#fbfcf9] text-[#252922] transition-all duration-300 ease-in-out lg:flex overflow-hidden ${
         isHovered ? "w-64 shadow-2xl bg-white" : "w-[72px] shadow-sm"
       }`}
     >
@@ -91,9 +91,9 @@ const Sidebar = () => {
         )}
       </Link>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2">
-        <div className="space-y-5">
+      {/* Navigation Links (Scrollbar completely hidden) */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="space-y-4">
           {navigation.map((group) => (
             <div key={group.label}>
               {isHovered ? (
