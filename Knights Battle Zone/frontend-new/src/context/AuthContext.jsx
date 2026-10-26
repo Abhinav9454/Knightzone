@@ -85,6 +85,14 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
   };
 
+  const updateUserData = (updatedFields) => {
+    setUser((prev) => {
+      const merged = { ...prev, ...updatedFields };
+      localStorage.setItem("kbz_user", JSON.stringify(merged));
+      return merged;
+    });
+  };
+
   const isAuthenticated = !!token;
   const currentRole = normalizeRole(user?.role);
   const isAdmin = currentRole === "ADMIN";
@@ -103,6 +111,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        updateUserData,
       }}
     >
       {children}

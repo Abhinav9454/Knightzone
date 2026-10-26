@@ -54,23 +54,27 @@ public class QuizAttemptService {
         Quiz quiz = quizRepository.findById(dto.getQuizId())
                 .orElseThrow(() -> new RuntimeException("Quiz not found with id: " + dto.getQuizId()));
 
-        // Check if user already attempted this quiz
-        quizAttemptRepository.findByUserIdAndQuizId(user.getId(), quiz.getId()).ifPresent(attempt -> {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User has already attempted this quiz");
-        });
+        // If user already attempted, reuse/update existing attempt; otherwise create new
+        QuizAttempt attempt = quizAttemptRepository.findByUserIdAndQuizId(user.getId(), quiz.getId())
+                .orElseGet(() -> {
+                    QuizAttempt newAttempt = new QuizAttempt();
+                    newAttempt.setUser(user);
+                    newAttempt.setQuiz(quiz);
+                    return newAttempt;
+                });
 
-        QuizAttempt attempt = new QuizAttempt();
-        attempt.setUser(user);
-        attempt.setQuiz(quiz);
         attempt.setSubmittedAt(LocalDateTime.now());
-        // DB columns are NOT NULL; initialize before first save.
         attempt.setScore(0);
         attempt.setTotalPoints(0);
+
+        if (attempt.getId() != null) {
+            answerRepository.deleteByQuizAttemptId(attempt.getId());
+        }
 
         try {
             attempt = quizAttemptRepository.save(attempt);
         } catch (DataIntegrityViolationException dataIntegrityViolationException) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User has already attempted this quiz");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Unable to save quiz attempt");
         }
 
         int totalScore = 0;
@@ -116,7 +120,7 @@ public class QuizAttemptService {
         return convertToDTO(savedAttempt, savedAnswers);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public QuizAttemptDTO getAttemptById(Long id) {
         QuizAttempt attempt = quizAttemptRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Quiz attempt not found with id: " + id));
@@ -125,6 +129,7 @@ public class QuizAttemptService {
         return convertToDTO(attempt, attempt.getAnswers());
     }
 
+    @Transactional(readOnly = true)
     public List<QuizAttemptDTO> getAttemptsByUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
@@ -137,6 +142,7 @@ public class QuizAttemptService {
         QuizAttemptDTO dto = new QuizAttemptDTO();
         dto.setId(attempt.getId());
         dto.setQuizId(attempt.getQuiz().getId());
+        dto.setQuizTitle(attempt.getQuiz().getTitle());
         dto.setScore(attempt.getScore());
         dto.setTotalPoints(attempt.getTotalPoints());
         dto.setSubmittedAt(attempt.getSubmittedAt());

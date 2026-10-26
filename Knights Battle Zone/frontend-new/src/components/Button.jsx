@@ -14,13 +14,13 @@ export default function Button({
 
   const variants = {
     primary:
-      "bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-100",
+      "bg-[#c5ff55] text-[#14170f] font-black uppercase tracking-wider hover:bg-[#d5ff83] focus:ring-[#c5ff55]/30 shadow-md shadow-[#c5ff55]/20",
     secondary:
-      "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-100",
+      "border border-white/15 bg-white/5 text-white hover:bg-white/10 focus:ring-white/20",
     dark:
-      "bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-200",
+      "bg-[#161a14] border border-white/10 text-white hover:bg-white/5 focus:ring-white/10",
     outline:
-      "border border-orange-500 text-orange-600 hover:bg-orange-50 focus:ring-orange-100",
+      "border border-[#c5ff55]/50 text-[#c5ff55] hover:bg-[#c5ff55]/10 focus:ring-[#c5ff55]/20",
   };
 
   const classes =

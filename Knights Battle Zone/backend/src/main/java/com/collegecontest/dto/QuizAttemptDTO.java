@@ -21,6 +21,9 @@ public class QuizAttemptDTO {
     @Schema(description = "Quiz id")
     private Long quizId;
 
+    @Schema(description = "Quiz title")
+    private String quizTitle;
+
     @Valid
     private List<AnswerDTO> answers;
 

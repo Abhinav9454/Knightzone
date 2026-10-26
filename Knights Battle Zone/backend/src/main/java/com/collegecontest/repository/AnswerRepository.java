@@ -15,6 +15,11 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
 
     @Modifying
     @Transactional
+    @Query("delete from Answer a where a.quizAttempt.id = :attemptId")
+    void deleteByQuizAttemptId(@Param("attemptId") Long attemptId);
+
+    @Modifying
+    @Transactional
     @Query("delete from Answer a where a.quizAttempt.quiz.id = :quizId")
     void deleteByQuizId(@Param("quizId") Long quizId);
 }

@@ -125,6 +125,23 @@ public class SecurityConfig {
                                 "/error",
                                 "/ws/**")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/problems/**",
+                                "/contests",
+                                "/contests/**",
+                                "/quizzes",
+                                "/placement/jobs",
+                                "/placement/jobs/**",
+                                "/leaderboard",
+                                "/leaderboard/**",
+                                "/inter-college/**",
+                                "/badges",
+                                "/badges/**",
+                                "/typing/texts/random",
+                                "/typing/leaderboard",
+                                "/clubs",
+                                "/clubs/**")
+                        .permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",

@@ -4,3 +4,4 @@ export { default as KnightCrest } from "./KnightCrest";
 export { default as TrophyIllustration } from "./TrophyIllustration";
 export { default as RankBadge } from "./RankBadge";
 export { default as VersusClash } from "./VersusClash";
+export { default as DeveloperKnight404Illustration } from "./DeveloperKnight404Illustration";

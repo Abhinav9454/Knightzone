@@ -6,6 +6,8 @@
 
 html {
   scroll-behavior: smooth;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -13,10 +15,55 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #07070b;
+  color: #e0e4dc;
   font-family: Inter, system-ui, sans-serif;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Hide scrollbar everywhere requested while preserving smooth scroll */
+/* ========================================================
+   GLOBAL SCROLLBAR ERADICATION
+   Scroling bar kahi bhi nhi dikhana chiye
+   Completely hides scrollbars globally while keeping 100% smooth scrolling.
+   ======================================================== */
+html,
+body,
+#root,
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE 10+ and Edge */
+}
+
+/* Chrome, Edge, Safari, Opera (Webkit) */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
@@ -26,4 +73,302 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* ========================================================
+   GLOBAL DAY & NIGHT MODE THEME ENGINE
+   Default: Knight Dark Arena (#0c0f0a / #161a14 / #c5ff55)
+   Day Mode: Clean Crisp Daylight (#f6f8f4 / #ffffff / #16a34a)
+   ======================================================== */
+
+/* Root and Base */
+.light-mode body {
+  background: #f6f8f4 !important;
+  color: #1e293b !important;
+}
+
+/* Background surfaces */
+.light-mode [class*="bg-[#0c0f0a]"],
+.light-mode [class*="bg-[#07070b]"],
+.light-mode [class*="bg-[#0e120c]"],
+.light-mode [class*="bg-[#10120f]"],
+.light-mode [class*="bg-[#11120f]"],
+.light-mode [class*="bg-[#0c0e0b]"] {
+  background-color: #f6f8f4 !important;
+}
+
+.light-mode [class*="bg-[#121610]"],
+.light-mode [class*="bg-[#11140f]"],
+.light-mode [class*="bg-[#141812]"],
+.light-mode aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode [class*="bg-[#161a14]"],
+.light-mode [class*="bg-[#181a16]"],
+.light-mode [class*="bg-[#181c16]"],
+.light-mode [class*="bg-[#14170f]"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode [class*="bg-[#1c221a]"] {
+  background-color: #f1f5f0 !important;
+}
+
+/* Clear dark linear gradients in day mode */
+.light-mode [class*="from-[#161a14]"],
+.light-mode [class*="from-[#121610]"],
+.light-mode [class*="from-[#0c0f0a]"],
+.light-mode [class*="to-[#121610]"],
+.light-mode [class*="to-[#161a14]"],
+.light-mode [class*="to-[#0c0f0a]"] {
+  background-image: none !important;
+  background-color: #ffffff !important;
+}
+
+/* Global Border Colors */
+.light-mode [class*="border-white/5"],
+.light-mode [class*="border-white/10"],
+.light-mode [class*="border-white/15"],
+.light-mode [class*="border-white/20"],
+.light-mode [class*="border-white/25"],
+.light-mode [class*="border-white/30"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Global Typography */
+.light-mode [class*="text-white"],
+.light-mode [class*="text-[#f1f2ec]"],
+.light-mode [class*="text-[#f0f0e9]"] {
+  color: #0f172a !important;
+}
+
+.light-mode [class*="text-[#e0e4dc]"] {
+  color: #1e293b !important;
+}
+
+.light-mode [class*="text-[#aab1a1]"],
+.light-mode [class*="text-[#8f9d8a]"],
+.light-mode [class*="text-[#c2cbbe]"],
+.light-mode [class*="text-[#a0a198]"],
+.light-mode [class*="text-[#929389]"],
+.light-mode [class*="text-[#8c8e83]"] {
+  color: #475569 !important;
+}
+
+.light-mode [class*="text-[#788874]"],
+.light-mode [class*="text-[#5a6b56]"],
+.light-mode [class*="text-[#95a390]"],
+.light-mode [class*="text-[#788071]"],
+.light-mode [class*="text-[#85877d]"],
+.light-mode [class*="text-[#73766c]"],
+.light-mode [class*="text-[#898b80]"] {
+  color: #64748b !important;
+}
+
+/* Leaderboard Gold/Amber Accents in Daylight Mode */
+.light-mode [class*="text-[#d7b45f]"] {
+  color: #b45309 !important;
+}
+
+.light-mode [class*="bg-[#d7b45f]"]:not([class*="bg-[#d7b45f]/"]) {
+  background-color: #d97706 !important;
+  color: #ffffff !important;
+}
+
+.light-mode [class*="bg-[#d7b45f]/"] {
+  background-color: #fef3c7 !important;
+}
+
+.light-mode [class*="border-[#d7b45f]"] {
+  border-color: #d97706 !important;
+}
+
+/* Semi-transparent Light background overlays */
+.light-mode [class*="bg-white/5"] {
+  background-color: #f1f5f9 !important;
+}
+
+.light-mode [class*="bg-white/10"] {
+  background-color: #e2e8f0 !important;
+}
+
+.light-mode [class*="hover:bg-white/5"]:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.light-mode [class*="hover:bg-white/10"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.light-mode [class*="hover:bg-white/15"]:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Accent Buttons: Lime Green -> Vibrant Daylight Emerald */
+.light-mode [class*="bg-[#c5ff55]"]:not([class*="bg-[#c5ff55]/"]) {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+.light-mode [class*="hover:bg-[#d5ff83]"]:hover {
+  background-color: #15803d !important;
+  color: #ffffff !important;
+}
+
+/* ========================================================
+   GLOBAL GREEN TEXT OVERRIDE:
+   "jaha jaha green me likha hai day me black and night me white karo jaha per bhi aasa hai..."
+   Night Mode (Default): All green text accents become pure crisp WHITE (#ffffff)
+   Day Mode (.light-mode): All green text accents become deep crisp BLACK (#0f172a)
+   ======================================================== */
+
+/* DAY MODE (.light-mode): ALL green text and white text -> PURE BLACK (#0f172a) */
+.light-mode .text-\[\#c5ff55\],
+.light-mode [class~="text-[#c5ff55]"],
+.light-mode [class*=" text-[#c5ff55]"],
+.light-mode [class^="text-[#c5ff55]"],
+.light-mode [class*="text-[#c5ff55]"],
+.light-mode [class*="text-emerald-400"],
+.light-mode [class*="text-emerald-300"],
+.light-mode [class*="text-emerald-500"],
+.light-mode [class*="text-emerald-600"],
+.light-mode [class*="text-emerald-700"],
+.light-mode [class*="text-emerald-800"],
+.light-mode [class*="text-green-400"],
+.light-mode [class*="text-green-500"],
+.light-mode [class*="text-green-600"],
+.light-mode [class*="hover:text-[#c5ff55]"],
+.light-mode [class*="hover:text-emerald-600"],
+.light-mode [class*="hover:text-emerald-700"],
+.light-mode [class*="group"]:hover [class*="group-hover:text-[#c5ff55]"],
+.light-mode [class*="group"]:hover [class*="group-hover:text-emerald-600"],
+.light-mode [class*="group"]:hover [class*="group-hover:text-emerald-700"],
+.light-mode [class*="text-white"],
+.light-mode [class*="text-[#f1f2ec]"],
+.light-mode [class*="text-[#f0f0e9]"],
+.light-mode [class*="text-white"]:not(:hover),
+.light-mode [class*="text-[#f1f2ec]"]:not(:hover),
+.light-mode [class*="text-[#f0f0e9]"]:not(:hover),
+.light-mode a[class*="text-white"],
+.light-mode h1[class*="text-white"],
+.light-mode h2[class*="text-white"],
+.light-mode h3[class*="text-white"],
+.light-mode h4[class*="text-white"],
+.light-mode p[class*="text-white"],
+.light-mode span[class*="text-white"],
+.light-mode td[class*="text-white"],
+.light-mode td [class*="text-white"] {
+  color: #0f172a !important;
+}
+
+/* NIGHT MODE (Default Dark Theme): ALL green text -> PURE WHITE (#ffffff) */
+html:not(.light-mode) .text-\[\#c5ff55\],
+html:not(.light-mode) [class~="text-[#c5ff55]"],
+html:not(.light-mode) [class*=" text-[#c5ff55]"],
+html:not(.light-mode) [class^="text-[#c5ff55]"],
+html:not(.light-mode) [class*="text-[#c5ff55]"],
+html:not(.light-mode) [class*="text-emerald-400"],
+html:not(.light-mode) [class*="text-emerald-300"],
+html:not(.light-mode) [class*="text-emerald-500"],
+html:not(.light-mode) [class*="text-emerald-600"],
+html:not(.light-mode) [class*="text-emerald-700"],
+html:not(.light-mode) [class*="text-green-400"],
+html:not(.light-mode) [class*="text-green-500"],
+html:not(.light-mode) [class*="hover:text-[#c5ff55]"],
+html:not(.light-mode) [class*="group-hover:text-[#c5ff55]"] {
+  color: #ffffff !important;
+}
+
+/* Ensure solid CTA buttons keep readable text */
+html:not(.light-mode) [class*="bg-[#c5ff55]"]:not([class*="bg-[#c5ff55]/"]),
+html:not(.light-mode) [class*="bg-[#c5ff55]"]:not([class*="bg-[#c5ff55]/"]) * {
+  color: #14170f !important;
+}
+
+.light-mode [class*="border-[#c5ff55]"]:not([class*="border-[#c5ff55]/"]) {
+  border-color: #16a34a !important;
+}
+
+.light-mode [class*="bg-[#c5ff55]/10"],
+.light-mode [class*="bg-[#c5ff55]/15"],
+.light-mode [class*="bg-[#c5ff55]/[0.05]"] {
+  background-color: #dcfce7 !important;
+}
+
+.light-mode [class*="border-[#c5ff55]/30"] {
+  border-color: #86efac !important;
+}
+
+/* Form Controls: Inputs, Textareas, Selects */
+.light-mode input:not([type="checkbox"]):not([type="radio"]),
+.light-mode textarea,
+.light-mode select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-mode input::placeholder,
+.light-mode textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-mode input:focus,
+.light-mode textarea:focus,
+.light-mode select:focus {
+  border-color: #16a34a !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18) !important;
+}
+
+/* Tables in Light Mode */
+.light-mode table {
+  background-color: #ffffff !important;
+}
+
+.light-mode th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode td {
+  border-color: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+.light-mode tr:hover td {
+  background-color: #f8fafc !important;
+}
+
+/* Status Badges */
+.light-mode [class*="text-rose-400"] {
+  color: #be123c !important;
+}
+
+.light-mode [class*="text-amber-400"] {
+  color: #b45309 !important;
+}
+
+.light-mode [class*="text-purple-400"] {
+  color: #7e22ce !important;
+}
+
+.light-mode [class*="text-blue-400"] {
+  color: #1d4ed8 !important;
+}
+
+.light-mode [class*="text-indigo-400"] {
+  color: #4338ca !important;
+}
+
+/* Modals & Dropdown Panels */
+.light-mode [role="dialog"],
+.light-mode .shadow-2xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08),
+    0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
 }

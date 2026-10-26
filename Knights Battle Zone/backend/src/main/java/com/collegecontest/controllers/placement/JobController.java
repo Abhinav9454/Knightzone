@@ -27,13 +27,11 @@ public class JobController {
     private final UserRepository userRepository;
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
     public List<Job> getOpenJobs() {
         return jobService.getAllOpenJobs();
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
     public Job getJob(@PathVariable Long id) {
         return jobService.getJobById(id);
     }
