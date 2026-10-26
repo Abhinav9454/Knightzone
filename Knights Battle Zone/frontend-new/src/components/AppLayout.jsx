@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import {
@@ -11,8 +10,14 @@ import {
   Gamepad2,
   Medal,
   ChevronRight,
+  HelpCircle,
+  Users,
+  Keyboard,
+  Briefcase,
+  UserCheck,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
+import { KnightLogo } from "./svg";
 
 const links = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -20,6 +25,11 @@ const links = [
   { name: "Contests", path: "/contests", icon: Trophy },
   { name: "Arena", path: "/arena", icon: Gamepad2 },
   { name: "Leaderboard", path: "/leaderboard", icon: Medal },
+  { name: "Quizzes", path: "/quizzes", icon: HelpCircle },
+  { name: "Clubs & Guilds", path: "/clubs", icon: Users },
+  { name: "Speed Typing", path: "/typing", icon: Keyboard },
+  { name: "Careers & Jobs", path: "/jobs", icon: Briefcase },
+  { name: "Knight Profile", path: "/profile", icon: UserCheck },
 ];
 
 const AppLayout = () => {
@@ -31,7 +41,7 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f8f6] text-[#202722]">
-      {/* Desktop sidebar */}
+      {/* Desktop collapsible hover sidebar */}
       <Sidebar />
 
       {/* Mobile header */}
@@ -41,11 +51,9 @@ const AppLayout = () => {
           onClick={closeMenu}
           className="flex items-center gap-2.5"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#183d34] text-[#c5ff55]">
-            <Swords size={19} />
-          </span>
+          <KnightLogo className="h-8 w-8" />
           <span className="text-sm font-black tracking-[0.12em] text-[#252922]">
-            KNIGHTZONE
+            KNIGHT<span className="text-orange-600">ZONE</span>
           </span>
         </Link>
 
@@ -60,19 +68,19 @@ const AppLayout = () => {
         </button>
       </header>
 
-      {/* Mobile navigation */}
+      {/* Mobile navigation drawer */}
       {menuOpen && (
         <>
           <button
             type="button"
             aria-label="Close navigation menu"
             onClick={closeMenu}
-            className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
           />
 
-          <nav className="fixed inset-x-0 top-16 z-50 border-b border-[#e4e5df] bg-[#fbfcf9] p-4 shadow-xl lg:hidden">
+          <nav className="fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-64px)] overflow-y-auto border-b border-[#e4e5df] bg-[#fbfcf9] p-4 shadow-xl lg:hidden">
             <p className="mb-3 px-3 text-[10px] font-bold tracking-[0.18em] text-[#92998f]">
-              NAVIGATION
+              ARENA NAVIGATION
             </p>
 
             <div className="space-y-1">
@@ -85,17 +93,17 @@ const AppLayout = () => {
                     to={item.path}
                     onClick={closeMenu}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${
+                      `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
                         isActive
-                          ? "bg-[#e8f2eb] text-[#183d34]"
-                          : "text-[#70796f] hover:bg-[#f0f2ed]"
+                          ? "bg-[#183d34] text-[#c5ff55] shadow-sm shadow-[#183d34]/20"
+                          : "text-[#555d53] hover:bg-[#f0f2ed] hover:text-[#252922]"
                       }`
                     }
                   >
-                    <Icon size={18} />
+                    <Icon size={17} />
                     <span className="flex-1">{item.name}</span>
                     {location.pathname === item.path && (
-                      <ChevronRight size={16} />
+                      <ChevronRight size={14} />
                     )}
                   </NavLink>
                 );
@@ -105,16 +113,16 @@ const AppLayout = () => {
             <Link
               to="/"
               onClick={closeMenu}
-              className="mt-3 block border-t border-[#e4e5df] px-3 pt-4 text-sm font-medium text-[#70796f]"
+              className="mt-4 block border-t border-[#e4e5df] px-3 pt-4 text-xs font-bold text-[#183d34]"
             >
-              Back to home
+              ← Back to homepage
             </Link>
           </nav>
         </>
       )}
 
-      {/* Page content */}
-      <div className="min-h-screen pt-16 lg:ml-64 lg:pt-0">
+      {/* Page content - with offset for compact desktop sidebar */}
+      <div className="min-h-screen pt-16 lg:pl-[72px] lg:pt-0 transition-all duration-300">
         <Outlet />
       </div>
     </div>
