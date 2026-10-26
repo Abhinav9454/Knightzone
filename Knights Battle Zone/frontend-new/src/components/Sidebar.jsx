@@ -6,10 +6,7 @@ import {
   Trophy,
   Gamepad2,
   Medal,
-  Settings,
-  CircleHelp,
   ChevronRight,
-  LogOut,
   ShieldCheck,
   UserCheck,
   HelpCircle,
@@ -185,50 +182,6 @@ const Sidebar = () => {
         </div>
       )}
 
-      {/* Footer Links & Logout */}
-      <div className="border-t border-[#e4e5df] p-2">
-        <Link
-          to="/"
-          title={!isHovered ? "Help & information" : undefined}
-          className={`flex items-center rounded-xl text-xs font-medium text-[#70796f] transition hover:bg-[#f0f2ed] hover:text-[#252922] ${
-            isHovered
-              ? "gap-3 px-3 py-2"
-              : "h-10 w-10 justify-center mx-auto"
-          }`}
-        >
-          <CircleHelp size={16} className="shrink-0" />
-          {isHovered && (
-            <>
-              <span className="whitespace-nowrap">Help & info</span>
-              <ChevronRight size={13} className="ml-auto" />
-            </>
-          )}
-        </Link>
-
-        {isAuthenticated && (
-          <button
-            onClick={logout}
-            title={!isHovered ? "Log out" : undefined}
-            className={`mt-1 flex w-full items-center rounded-xl text-xs font-semibold text-rose-600 transition hover:bg-rose-50 ${
-              isHovered
-                ? "gap-3 px-3 py-2"
-                : "h-10 w-10 justify-center mx-auto"
-            }`}
-          >
-            <LogOut size={16} className="shrink-0" />
-            {isHovered && <span className="whitespace-nowrap">Log out</span>}
-          </button>
-        )}
-
-        {isHovered && (
-          <div className="mt-2 border-t border-[#e4e5df] pt-2 px-1">
-            <p className="flex items-center gap-1.5 text-[9px] font-semibold text-emerald-700 whitespace-nowrap">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              KNIGHTZONE · LIVE
-            </p>
-          </div>
-        )}
-      </div>
     </aside>
   );
 };
