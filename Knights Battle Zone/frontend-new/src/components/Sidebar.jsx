@@ -11,7 +11,9 @@ import {
   CircleHelp,
   ArrowUpRight,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const navigation = [
   {
@@ -32,6 +34,7 @@ const navigation = [
 ];
 
 const Sidebar = () => {
+  const { user, isAuthenticated, logout } = useAuth();
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-[#e4e5df] bg-[#fbfcf9] text-[#252922] lg:flex">
       {/* Brand */}
@@ -136,9 +139,20 @@ const Sidebar = () => {
           <ChevronRight size={14} className="ml-auto" />
         </Link>
 
+        {isAuthenticated && (
+          <button
+            onClick={logout}
+            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+          >
+            <LogOut size={16} />
+            Log out ({user?.name || user?.email?.split("@")[0] || "User"})
+          </button>
+        )}
+
         <div className="mt-3 border-t border-[#e4e5df] pt-4">
-          <p className="text-[10px] text-[#92998f]">
-            KNIGHTZONE · FRONTEND PREVIEW
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            KNIGHTZONE · LIVE BACKEND
           </p>
         </div>
       </div>

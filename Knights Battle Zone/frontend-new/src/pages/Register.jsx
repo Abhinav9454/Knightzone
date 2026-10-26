@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Swords,
@@ -15,7 +15,9 @@ import {
   Check,
   ShieldCheck,
   Code2,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const accountTypes = [
   {
@@ -62,6 +64,9 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -86,7 +91,7 @@ const Register = () => {
     setSuccessMessage("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
     setSuccessMessage("");
@@ -122,10 +127,23 @@ const Register = () => {
       return;
     }
 
-    // UI preview only. No registration API is connected yet.
-    setSuccessMessage(
-      "Your form is valid. Account creation will be available after backend integration."
-    );
+    setIsLoading(true);
+    try {
+      await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      setSuccessMessage("Account created successfully! Taking you to dashboard...");
+      setTimeout(() => navigate("/dashboard"), 800);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        "Registration failed. Please verify your details or use another email.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const inputClass =
@@ -545,22 +563,21 @@ const Register = () => {
 
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#183d34] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245747] focus:outline-none focus:ring-4 focus:ring-[#13836d]/20"
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#183d34] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245747] focus:outline-none focus:ring-4 focus:ring-[#13836d]/20 disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              Create account <ArrowRight size={16} />
+              {isLoading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create account <ArrowRight size={16} />
+                </>
+              )}
             </button>
           </form>
-
-          <div className="mt-5 flex items-start gap-2 rounded-xl border border-[#e4e4d7] bg-[#f3f2e9] p-3">
-            <ShieldCheck
-              size={16}
-              className="mt-0.5 shrink-0 text-[#6c765c]"
-            />
-            <p className="text-[11px] leading-5 text-[#77766e]">
-              Preview mode: this form validates your entries locally. It does
-              not create an account or send your details to a server.
-            </p>
-          </div>
         </motion.div>
 
         <footer className="flex flex-wrap justify-between gap-2 border-t border-[#e4e7e1] pt-4 text-[10px] text-[#929b93]">

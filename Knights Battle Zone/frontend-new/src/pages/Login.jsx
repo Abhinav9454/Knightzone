@@ -10,19 +10,36 @@ import {
   Mail,
   LockKeyhole,
   Code2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-    // UI preview only. Real authentication is not connected yet.
-    window.alert("Login is not connected to the backend yet.");
+    try {
+      await login({ email, password });
+      navigate("/dashboard");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        "Invalid email or password. Please check your credentials.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -190,11 +207,28 @@ const Login = () => {
               </div>
             </div>
 
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#183d34] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245747]"
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#183d34] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245747] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Sign in <ArrowRight size={16} />
+              {isLoading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in <ArrowRight size={16} />
+                </>
+              )}
             </button>
           </form>
 
@@ -212,11 +246,6 @@ const Login = () => {
           >
             Create a new account
           </Link>
-
-          <p className="mt-6 rounded-lg border border-[#e4e4d7] bg-[#f3f2e9] p-3 text-xs leading-5 text-[#77766e]">
-            Preview mode: this form does not send credentials to a server or
-            create a login session yet.
-          </p>
         </motion.div>
 
         <footer className="flex flex-wrap justify-between gap-2 text-[10px] text-[#929b93]">

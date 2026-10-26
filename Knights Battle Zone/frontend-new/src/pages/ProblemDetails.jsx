@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,7 +9,9 @@ import {
   Clock3,
   FileCode2,
   Lightbulb,
+  Loader2,
 } from "lucide-react";
+import { problemsApi, submissionsApi } from "../services/api";
 
 const problems = [
   {
@@ -331,13 +333,78 @@ public:
 
 export default function ProblemDetails() {
   const { id } = useParams();
-  const problem = problems.find((item) => item.id === Number(id));
-
+  const [problem, setProblem] = useState(() => problems.find((item) => item.id === Number(id)));
+  const [loading, setLoading] = useState(!problem);
   const [language, setLanguage] = useState("JavaScript");
   const [activeTab, setActiveTab] = useState("Description");
   const [code, setCode] = useState("");
   const [consoleMessage, setConsoleMessage] = useState("");
   const [showConsole, setShowConsole] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const local = problems.find((item) => item.id === Number(id));
+    if (local) {
+      setProblem(local);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      problemsApi
+        .getProblem(id)
+        .then((data) => {
+          if (isMounted && data) {
+            setProblem({
+              id: data.id,
+              title: data.title,
+              difficulty: data.difficulty
+                ? data.difficulty.charAt(0).toUpperCase() + data.difficulty.slice(1).toLowerCase()
+                : "Medium",
+              topic: "Algorithms",
+              description: data.description,
+              examples: [
+                {
+                  input: data.sampleInput || "Sample input",
+                  output: data.sampleOutput || "Sample output",
+                  explanation: data.outputFormat || "",
+                },
+              ],
+              constraints: [
+                data.inputFormat || "Standard input format",
+                `Time limit: ${data.timeLimitSeconds || 2}s`,
+              ],
+              starter: {
+                JavaScript: `// Problem: ${data.title}\nfunction solve() {\n  // Write solution here\n}`,
+                Python: `# Problem: ${data.title}\ndef solve():\n    pass`,
+                Java: `import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write solution here\n    }\n}`,
+                "C++": `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write solution here\n    return 0;\n}`,
+              },
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not fetch problem by id", err);
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f5f0] p-10 text-[#202720]">
+        <div className="flex items-center gap-3 font-semibold">
+          <Loader2 className="animate-spin text-green-700" size={24} />
+          Loading problem details from Knightzone backend...
+        </div>
+      </main>
+    );
+  }
 
   if (!problem) {
     return (
@@ -350,7 +417,7 @@ export default function ProblemDetails() {
     );
   }
 
-  const currentCode = code || problem.starter[language];
+  const currentCode = code || problem.starter[language] || `// Write your ${language} solution`;
 
   const changeLanguage = (nextLanguage) => {
     setLanguage(nextLanguage);
@@ -358,18 +425,52 @@ export default function ProblemDetails() {
     setConsoleMessage("");
   };
 
-  const handleRun = () => {
+  const handleRun = async () => {
     setShowConsole(true);
-    setConsoleMessage(
-      "Code execution is not connected yet. This is a frontend preview."
-    );
+    setIsExecuting(true);
+    setConsoleMessage("Running code against test inputs...");
+
+    try {
+      const res = await submissionsApi.runCode({
+        problemId: problem.id,
+        language: language === "C++" ? "CPP" : language.toUpperCase(),
+        code: currentCode,
+      });
+
+      setConsoleMessage(
+        `[Result] Status: ${res.status || "Completed"}\nOutput:\n${res.output || "(no output returned)"}\nExecution Time: ${res.executionTime || 0} ms`
+      );
+    } catch (err) {
+      setConsoleMessage(
+        `Execution failed: ${err.response?.data?.message || "Ensure you are logged in to submit code."}`
+      );
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setShowConsole(true);
-    setConsoleMessage(
-      "Submission is not connected yet. Your code has not been evaluated."
-    );
+    setIsExecuting(true);
+    setConsoleMessage("Submitting code to judge evaluation engine...");
+
+    try {
+      const res = await submissionsApi.submitCode({
+        problemId: problem.id,
+        language: language === "C++" ? "CPP" : language.toUpperCase(),
+        code: currentCode,
+      });
+
+      setConsoleMessage(
+        `[Evaluation] Status: ${res.status || "Submitted"}\nDetails:\n${res.output || "Evaluation completed successfully"}\nExecution Time: ${res.executionTime || 0} ms`
+      );
+    } catch (err) {
+      setConsoleMessage(
+        `Submission error: ${err.response?.data?.message || "Ensure you are logged in before submitting solutions."}`
+      );
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   return (
@@ -390,7 +491,10 @@ export default function ProblemDetails() {
             <h1 className="text-lg font-bold">Problem Workspace</h1>
           </div>
         </div>
-        <span className="text-sm text-amber-600">Frontend preview</span>
+        <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          Live Backend
+        </span>
       </header>
 
       <main className="mx-auto max-w-[1600px] p-4 md:p-6">

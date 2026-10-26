@@ -11,7 +11,10 @@ import {
   LayoutDashboard,
   LogIn,
   UserPlus,
+  LogOut,
+  UserCheck,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const navLinks = [
   { name: "Problems", path: "/problems", icon: Code2 },
@@ -21,6 +24,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -79,21 +83,44 @@ export default function Navbar() {
         {/* DESKTOP AUTH BUTTONS */}
 
         <div className="hidden items-center gap-3 sm:flex">
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
-          >
-            <LogIn size={16} />
-            Log in
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-200"
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                  {(user?.name || user?.email || "K").charAt(0).toUpperCase()}
+                </div>
+                <span>{user?.name || user?.email?.split("@")[0]}</span>
+              </Link>
+              <button
+                onClick={logout}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+              >
+                <LogOut size={14} />
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
+              >
+                <LogIn size={16} />
+                Log in
+              </Link>
 
-          <Link
-            to="/register"
-            className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100"
-          >
-            Get started
-            <UserPlus size={16} />
-          </Link>
+              <Link
+                to="/register"
+                className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100"
+              >
+                Get started
+                <UserPlus size={16} />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* MOBILE MENU BUTTON */}

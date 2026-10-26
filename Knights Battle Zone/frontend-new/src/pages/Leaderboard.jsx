@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -12,7 +12,10 @@ import {
   Minus,
   ChevronDown,
   Users,
+  Loader2,
 } from "lucide-react";
+import { leaderboardApi } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const players = [
   {
@@ -108,14 +111,49 @@ const podiumStyles = {
 };
 
 const Leaderboard = () => {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("All time");
   const [sortBy, setSortBy] = useState("Rating");
+  const [backendPlayers, setBackendPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    leaderboardApi
+      .getGlobal({ page: 0, size: 50 })
+      .then((data) => {
+        if (isMounted && data?.content && data.content.length > 0) {
+          const mapped = data.content.map((entry, idx) => ({
+            id: entry.userId || idx + 1,
+            name: entry.username || entry.name || `Knight_${idx + 1}`,
+            handle: `@${(entry.username || entry.name || `knight${idx + 1}`).toLowerCase().replace(/\s+/g, "")}`,
+            rating: entry.rating || 1000,
+            solved: entry.problemsSolved || entry.solved || 0,
+            wins: entry.wins || 0,
+            change: entry.rankChange || 0,
+          }));
+          setBackendPlayers(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not fetch leaderboard, using fallback list", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const playerList = backendPlayers.length > 0 ? backendPlayers : players;
 
   const sortedPlayers = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return [...players]
+    return [...playerList]
       .filter(
         (player) =>
           player.name.toLowerCase().includes(query) ||
@@ -126,12 +164,23 @@ const Leaderboard = () => {
         if (sortBy === "Contest wins") return b.wins - a.wins;
         return b.rating - a.rating;
       });
-  }, [search, sortBy]);
+  }, [playerList, search, sortBy]);
 
-  const podiumPlayers = [players[1], players[0], players[2]];
+  const podiumPlayers = [
+    playerList[1] || players[1],
+    playerList[0] || players[0],
+    playerList[2] || players[2],
+  ];
 
-  const currentRank = players.findIndex((player) => player.name === "Anamika") + 1;
-  const currentPlayer = players.find((player) => player.name === "Anamika");
+  const currentUserName = user?.name || "Knight";
+  const currentRank = playerList.findIndex((player) => player.name === currentUserName) + 1 || 1;
+  const currentPlayer = playerList.find((player) => player.name === currentUserName) || {
+    name: currentUserName,
+    handle: `@${(user?.email?.split("@")[0] || "knight").toLowerCase()}`,
+    rating: 1000,
+    solved: 0,
+    wins: 0,
+  };
 
   return (
     <main className="min-h-screen bg-[#11120f] px-4 pb-12 pt-8 text-[#f0f0e9] sm:px-7 lg:px-10 lg:pt-10">

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Code2,
@@ -11,7 +12,10 @@ import {
   CheckCircle2,
   XCircle,
   CalendarDays,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { dashboardApi } from "../services/api";
 
 const stats = [
   {
@@ -113,6 +117,72 @@ const dailyGoals = [
 ];
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    dashboardApi
+      .getSummary()
+      .then((data) => {
+        if (isMounted) setSummary(data);
+      })
+      .catch((err) => {
+        console.warn("Could not load live dashboard summary", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const displayName = user?.name || user?.email?.split("@")[0] || "Knight";
+  const liveStats = [
+    {
+      icon: Code2,
+      label: "Problems Solved",
+      value: summary?.problemsSolved ?? 0,
+      change: "All-time solved",
+      color: "bg-indigo-50 text-indigo-600",
+    },
+    {
+      icon: Target,
+      label: "Rating",
+      value: summary?.currentRating ?? 1000,
+      change: "Platform rating",
+      color: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      icon: Swords,
+      label: "Contests Joined",
+      value: summary?.contestsParticipated ?? 0,
+      change: `${summary?.upcomingContests ?? 0} upcoming`,
+      color: "bg-amber-50 text-amber-600",
+    },
+    {
+      icon: Trophy,
+      label: "Global Rank",
+      value: summary?.globalRank ? `#${summary.globalRank}` : "#1",
+      change: "Global leaderboard",
+      color: "bg-rose-50 text-rose-600",
+    },
+  ];
+
+  const submissionsToDisplay =
+    summary?.recentSubmissions && summary.recentSubmissions.length > 0
+      ? summary.recentSubmissions.map((s) => ({
+          id: s.id,
+          problem: s.problemTitle || "Problem",
+          difficulty: "Easy",
+          status: s.status || "Accepted",
+          language: s.language || "Java",
+          time: s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : "Recent",
+        }))
+      : recentSubmissions;
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
@@ -124,7 +194,7 @@ export default function DashboardPage() {
             </p>
 
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-              Welcome back, Anamika 👋
+              Welcome back, {displayName} 👋
             </h1>
 
             <p className="mt-2 text-sm text-slate-600">
@@ -180,7 +250,7 @@ export default function DashboardPage() {
 
         {/* KPI cards */}
         <section className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map(({ icon: Icon, label, value, change, color }) => (
+          {liveStats.map(({ icon: Icon, label, value, change, color }) => (
             <article
               key={label}
               className="rounded-3xl border border-slate-200 bg-white p-6"
@@ -226,7 +296,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-slate-100">
-              {recentSubmissions.map((submission) => (
+              {submissionsToDisplay.map((submission) => (
                 <div
                   key={submission.id}
                   className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between"

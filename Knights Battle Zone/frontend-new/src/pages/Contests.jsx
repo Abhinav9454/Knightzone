@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Trophy,
@@ -10,7 +10,9 @@ import {
   CircleCheck,
   Circle,
   Medal,
+  Loader2,
 } from "lucide-react";
+import { contestsApi } from "../services/api";
 
 const contests = [
   {
@@ -106,6 +108,46 @@ const TABS = ["Upcoming", "Past", "My Contests"];
 
 export default function Contests() {
   const [activeTab, setActiveTab] = useState("Upcoming");
+  const [backendContests, setBackendContests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    contestsApi
+      .getAll(0, 50)
+      .then((data) => {
+        if (isMounted && data?.content && data.content.length > 0) {
+          const mapped = data.content.map((c) => ({
+            id: c.id,
+            name: c.title,
+            code: `KZ-00${c.id}`,
+            type: "Live Contest",
+            date: c.startTime ? new Date(c.startTime).toLocaleDateString() : "Upcoming",
+            startTime: c.startTime
+              ? new Date(c.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : "8:00 PM",
+            duration: `${c.durationMinutes || 90} minutes`,
+            problems: 3,
+            level: "All levels",
+            status: new Date(c.endTime) > new Date() ? "Upcoming" : "Completed",
+            description: c.description || "Timed algorithm competition on Knights Battle Zone.",
+          }));
+          setBackendContests(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load backend contests, using default", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const contestList = backendContests.length > 0 ? backendContests : contests;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -132,7 +174,7 @@ export default function Contests() {
 
             <div className="grid grid-cols-3 gap-4 lg:w-80">
               {[
-                { label: "Upcoming", value: contests.length },
+                { label: "Upcoming", value: contestList.length },
                 { label: "Problems", value: "15" },
                 { label: "Format", value: "Timed" },
               ].map((item) => (
@@ -198,7 +240,7 @@ export default function Contests() {
             aria-labelledby="tab-Upcoming"
             className="mt-6 space-y-4"
           >
-            {contests.map((contest) => (
+            {contestList.map((contest) => (
               <article
                 key={contest.id}
                 className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-200/50 sm:p-7"

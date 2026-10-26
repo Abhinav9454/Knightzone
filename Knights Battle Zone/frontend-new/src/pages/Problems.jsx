@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -11,7 +11,9 @@ import {
   Code2,
   ChevronDown,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
+import { problemsApi } from "../services/api";
 
 const problems = [
   {
@@ -100,16 +102,55 @@ export default function Problems() {
   const [topic, setTopic] = useState("All");
   const [status, setStatus] = useState("All");
   const [bookmarks, setBookmarks] = useState([]);
+  const [backendProblems, setBackendProblems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    problemsApi
+      .getProblemSet({ page: 0, size: 100 })
+      .then((data) => {
+        if (isMounted && data?.content && data.content.length > 0) {
+          const mapped = data.content.map((p) => {
+            const diff = p.difficulty
+              ? p.difficulty.charAt(0).toUpperCase() + p.difficulty.slice(1).toLowerCase()
+              : "Medium";
+            return {
+              id: p.id,
+              title: p.title,
+              difficulty: diff,
+              topic: diff === "Hard" ? "Dynamic Programming" : diff === "Medium" ? "Algorithms" : "Array & Math",
+              acceptance: "51.2%",
+              points: p.points || 100,
+              solved: false,
+            };
+          });
+          setBackendProblems(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not fetch backend problems, using fallback", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const problemList = backendProblems.length > 0 ? backendProblems : problems;
 
   const topics = useMemo(
-    () => ["All", ...new Set(problems.map((problem) => problem.topic))],
-    []
+    () => ["All", ...new Set(problemList.map((problem) => problem.topic))],
+    [problemList]
   );
 
   const filteredProblems = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return problems.filter((problem) => {
+    return problemList.filter((problem) => {
       const matchesSearch =
         problem.title.toLowerCase().includes(query) ||
         problem.topic.toLowerCase().includes(query);
@@ -135,9 +176,9 @@ export default function Problems() {
         matchesStatus
       );
     });
-  }, [search, difficulty, topic, status, bookmarks]);
+  }, [problemList, search, difficulty, topic, status, bookmarks]);
 
-  const solvedCount = problems.filter(
+  const solvedCount = problemList.filter(
     (problem) => problem.solved
   ).length;
 
