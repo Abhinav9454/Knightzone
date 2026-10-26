@@ -39,19 +39,19 @@ public class JobController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Job createJob(@RequestBody Job job) {
         return jobService.createJob(job, currentUser().getId());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Job updateJob(@PathVariable Long id, @RequestBody Job job) {
         return jobService.updateJob(id, job, currentUser().getId());
     }
 
     @PostMapping("/{jobId}/apply")
-    @PreAuthorize("hasAnyRole('STUDENT','ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER','STUDENT','ADMIN')")
     public Application apply(
             @PathVariable Long jobId,
             @RequestBody(required = false) Map<String, String> payload) {
@@ -62,7 +62,7 @@ public class JobController {
     }
 
     @GetMapping("/{jobId}/applications")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Application> getApplications(@PathVariable Long jobId) {
         return applicationService.getApplicationsForJob(jobId);
     }

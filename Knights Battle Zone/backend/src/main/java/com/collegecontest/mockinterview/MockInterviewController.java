@@ -209,6 +209,6 @@ public class MockInterviewController {
         String email = authentication.getName();
         User user = userRepository.findByEmail(email).orElse(null);
         return user != null && user.getRole() != null
-                && ("ADMIN".equalsIgnoreCase(user.getRole().name()) || "SUPER_ADMIN".equalsIgnoreCase(user.getRole().name()));
+                && "ADMIN".equalsIgnoreCase(user.getRole().name());
     }
 }

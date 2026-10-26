@@ -210,7 +210,7 @@ public class LiveChatService {
     }
 
     private boolean isAdmin(User user) {
-        return user.getRole() == Role.ADMIN || user.getRole() == Role.SUPER_ADMIN;
+        return user.getRole() == Role.ADMIN;
     }
 
     private void ensureReadable(LiveChatConversation conversation, User current) {

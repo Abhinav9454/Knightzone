@@ -93,8 +93,6 @@ app:
     read-only-transactions-only: ${APP_DB_ROUTING_READ_ONLY_TX_ONLY:true}
   bootstrap-admin:
     enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
-    super-admin-email: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:}
-    super-admin-password: ${BOOTSTRAP_SUPER_ADMIN_PASSWORD:}
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
 

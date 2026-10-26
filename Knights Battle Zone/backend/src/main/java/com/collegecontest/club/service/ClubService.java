@@ -34,7 +34,7 @@ public class ClubService {
 
     public ClubDetailDTO createClub(CreateClubRequest request, String email) {
         User current = getCurrentUser(email);
-        if (current.getRole() != Role.ADMIN && current.getRole() != Role.SUPER_ADMIN) {
+        if (current.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(FORBIDDEN, "Only admin users can create clubs");
         }
 

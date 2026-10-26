@@ -150,7 +150,7 @@ public class ContestServiceTest {
         User admin = new User();
         admin.setId(7L);
         admin.setEmail("admin@example.com");
-        admin.setRole(Role.SUPER_ADMIN);
+        admin.setRole(Role.ADMIN);
 
         when(contestRepository.findById(50L)).thenReturn(Optional.of(contest));
         when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));

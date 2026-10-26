@@ -1,11 +1,46 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import { authApi } from "../services/api";
 
 const AuthContext = createContext(null);
 
+const parseJwt = (token) => {
+  try {
+    if (!token) return null;
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeRole = (role) => {
+  if (!role) return "USER";
+  const upper = String(role).toUpperCase();
+  return upper === "ADMIN" ? "ADMIN" : "USER";
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => authApi.getCurrentUser());
   const [token, setToken] = useState(() => authApi.getToken());
+  const [user, setUser] = useState(() => {
+    const saved = authApi.getCurrentUser();
+    const tokenVal = authApi.getToken();
+    const claims = parseJwt(tokenVal);
+    if (saved) {
+      return {
+        ...saved,
+        role: normalizeRole(claims?.role || saved.role),
+      };
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
 
   const login = async (credentials) => {
@@ -13,7 +48,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await authApi.login(credentials);
       setToken(data.token);
-      setUser(data.user || { email: credentials.email });
+      const claims = parseJwt(data.token);
+      const userObj = {
+        ...(data.user || { email: credentials.email }),
+        role: normalizeRole(claims?.role || data.user?.role),
+      };
+      setUser(userObj);
+      localStorage.setItem("kbz_user", JSON.stringify(userObj));
       return data;
     } finally {
       setLoading(false);
@@ -25,7 +66,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await authApi.register(userData);
       setToken(data.token);
-      setUser(data.user || { email: userData.email, name: userData.name });
+      const claims = parseJwt(data.token);
+      const userObj = {
+        ...(data.user || { email: userData.email, name: userData.name }),
+        role: normalizeRole(claims?.role || data.user?.role),
+      };
+      setUser(userObj);
+      localStorage.setItem("kbz_user", JSON.stringify(userObj));
       return data;
     } finally {
       setLoading(false);
@@ -39,12 +86,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAuthenticated = !!token;
+  const currentRole = normalizeRole(user?.role);
+  const isAdmin = currentRole === "ADMIN";
+  const isUser = currentRole === "USER";
 
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
+        role: currentRole,
+        isAdmin,
+        isUser,
         isAuthenticated,
         loading,
         login,

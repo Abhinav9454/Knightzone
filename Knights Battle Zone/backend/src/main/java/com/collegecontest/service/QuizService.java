@@ -105,7 +105,7 @@ public class QuizService {
         User actingUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        boolean isAdmin = actingUser.getRole() == Role.ADMIN || actingUser.getRole() == Role.SUPER_ADMIN;
+        boolean isAdmin = actingUser.getRole() == Role.ADMIN;
         boolean isCreator = quiz.getCreatedBy() != null && quiz.getCreatedBy().getId().equals(actingUser.getId());
         if (!isAdmin && !isCreator) {
             throw new RuntimeException("Only quiz creator or admin can update this quiz");
@@ -147,9 +147,9 @@ public class QuizService {
         User actingUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        boolean isAdmin = actingUser.getRole() == Role.ADMIN || actingUser.getRole() == Role.SUPER_ADMIN;
+        boolean isAdmin = actingUser.getRole() == Role.ADMIN;
         if (!isAdmin) {
-            throw new RuntimeException("Only admin or super admin can delete this quiz");
+            throw new RuntimeException("Only admin can delete this quiz");
         }
 
         // Delete attempt-linked answers first, then attempts, then quiz structure.

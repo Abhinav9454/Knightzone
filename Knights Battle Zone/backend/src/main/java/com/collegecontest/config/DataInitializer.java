@@ -68,12 +68,6 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${app.bootstrap-admin.enabled:false}")
     private boolean bootstrapAdminEnabled;
 
-    @Value("${app.bootstrap-admin.super-admin-email:}")
-    private String bootstrapSuperAdminEmail;
-
-    @Value("${app.bootstrap-admin.super-admin-password:}")
-    private String bootstrapSuperAdminPassword;
-
     @Value("${app.bootstrap-admin.admin-email:}")
     private String bootstrapAdminEmail;
 
@@ -138,13 +132,6 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         if (bootstrapAdminEnabled) {
-            bootstrapPrivilegedUser(
-                    bootstrapSuperAdminEmail,
-                    bootstrapSuperAdminPassword,
-                    "superadmin",
-                    "Super Admin",
-                    "Platform HQ",
-                    Role.SUPER_ADMIN);
             bootstrapPrivilegedUser(
                     bootstrapAdminEmail,
                     bootstrapAdminPassword,
@@ -285,7 +272,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private User resolveSeedContentOwner() {
-        List<User> admins = userRepository.findByRoleIn(List.of(Role.SUPER_ADMIN, Role.ADMIN));
+        List<User> admins = userRepository.findByRoleIn(List.of(Role.ADMIN));
         if (!admins.isEmpty()) {
             return admins.get(0);
         }

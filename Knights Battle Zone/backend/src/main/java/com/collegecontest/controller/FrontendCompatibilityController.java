@@ -84,7 +84,7 @@ public class FrontendCompatibilityController {
     }
 
     @PostMapping("/integrity/{id}/review")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void reviewIntegrity(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String action = body == null
                 ? STATUS_REVIEWED
@@ -199,25 +199,25 @@ public class FrontendCompatibilityController {
     }
 
     @PostMapping("/review-flags/{id}/resolve")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void resolveFlag(@PathVariable Long id) {
         updateReviewFlagStatus(id, STATUS_RESOLVED);
     }
 
     @PostMapping("/review-flags/{id}/dismiss")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void dismissFlag(@PathVariable Long id) {
         updateReviewFlagStatus(id, STATUS_DISMISSED);
     }
 
     @GetMapping("/suspicious")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Collection<SuspiciousPayload> getSuspicious() {
         return List.copyOf(suspiciousUsers.values());
     }
 
     @PostMapping("/suspicious/{userId}/investigate")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void investigate(@PathVariable Long userId) {
         SuspiciousPayload payload = suspiciousUsers.get(userId);
         if (payload != null) {

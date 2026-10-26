@@ -71,7 +71,7 @@ public class HintController {
         // Check if admin
         boolean isAdmin = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ROLE_ADMIN") || role.equals("ROLE_SUPER_ADMIN"));
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
 
         if (isAdmin) {
             return true;

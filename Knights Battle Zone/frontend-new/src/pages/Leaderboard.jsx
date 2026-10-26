@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { leaderboardApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { TrophyIllustration } from "../components/svg";
 
 const players = [
   {
@@ -207,12 +208,10 @@ const Leaderboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#d7b45f]/10 text-[#d7b45f]">
-              <Medal size={22} />
-            </div>
+          <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-md backdrop-blur-sm">
+            <TrophyIllustration className="w-16 h-16 shrink-0" />
             <div>
-              <p className="text-xs text-[#96978d]">Your demo position</p>
+              <p className="text-xs text-[#96978d]">Your standings position</p>
               <p className="mt-1 text-xl font-bold">
                 #{currentRank}
                 <span className="ml-2 text-xs font-normal text-[#96978d]">

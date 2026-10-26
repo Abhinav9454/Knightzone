@@ -81,7 +81,7 @@ public class User {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    private Role role = Role.STUDENT;
+    private Role role = Role.USER;
 
     private LocalDateTime aiLastUsedAt;
 

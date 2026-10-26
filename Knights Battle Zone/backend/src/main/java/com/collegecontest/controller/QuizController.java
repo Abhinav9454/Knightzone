@@ -46,9 +46,7 @@ public class QuizController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
         boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(auth ->
-                        auth.getAuthority().equals("ROLE_ADMIN") ||
-                        auth.getAuthority().equals("ROLE_SUPER_ADMIN"));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
         if (!isAdmin && quiz.getQuestions() != null) {
             quiz.getQuestions().forEach(question -> {
@@ -62,7 +60,7 @@ public class QuizController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create a new quiz", responses = {
             @ApiResponse(responseCode = "200", description = "Quiz created") })
     public QuizDTO createQuiz(@RequestBody @jakarta.validation.Valid QuizDTO quizDTO) {
@@ -75,7 +73,7 @@ public class QuizController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update quiz details/questions", responses = {
             @ApiResponse(responseCode = "200", description = "Quiz updated") })
     public QuizDTO updateQuiz(@PathVariable Long id, @RequestBody QuizDTO quizDTO) {
@@ -88,7 +86,7 @@ public class QuizController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete quiz", responses = {
             @ApiResponse(responseCode = "204", description = "Quiz deleted") })
     public ResponseEntity<Void> deleteQuiz(@PathVariable Long id) {

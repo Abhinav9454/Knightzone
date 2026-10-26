@@ -129,9 +129,9 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html")
-                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .hasRole("ADMIN")
                         .requestMatchers("/actuator/**")
-                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

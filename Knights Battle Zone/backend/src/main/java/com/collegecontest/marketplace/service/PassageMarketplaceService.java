@@ -396,7 +396,7 @@ public class PassageMarketplaceService {
     }
 
     private boolean isAdmin(User user) {
-        return user.getRole() == Role.ADMIN || user.getRole() == Role.SUPER_ADMIN;
+        return user.getRole() == Role.ADMIN;
     }
 
     private void ensureAdmin(User user) {

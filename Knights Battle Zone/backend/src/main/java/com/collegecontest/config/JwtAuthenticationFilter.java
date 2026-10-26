@@ -105,7 +105,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (user.getRole() == Role.ADMIN
                     && user.getAdminExpiresAt() != null
                     && user.getAdminExpiresAt().isBefore(LocalDateTime.now())) {
-                user.setRole(Role.STUDENT);
+                user.setRole(Role.USER);
                 user.setAdminExpiresAt(null);
                 userRepository.save(user);
             }

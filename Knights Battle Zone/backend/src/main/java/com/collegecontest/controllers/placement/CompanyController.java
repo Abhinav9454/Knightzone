@@ -22,7 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/placement/company")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+@PreAuthorize("hasRole('ADMIN')")
 public class CompanyController {
     private final JobService jobService;
     private final ApplicationService applicationService;

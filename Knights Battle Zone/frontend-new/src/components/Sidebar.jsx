@@ -1,7 +1,5 @@
-
 import { NavLink, Link } from "react-router-dom";
 import {
-  Swords,
   LayoutDashboard,
   Code2,
   Trophy,
@@ -9,11 +7,13 @@ import {
   Medal,
   Settings,
   CircleHelp,
-  ArrowUpRight,
   ChevronRight,
   LogOut,
+  ShieldCheck,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { KnightLogo } from "./svg";
 
 const navigation = [
   {
@@ -34,21 +34,20 @@ const navigation = [
 ];
 
 const Sidebar = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, role, isAdmin, isAuthenticated, logout } = useAuth();
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-[#e4e5df] bg-[#fbfcf9] text-[#252922] lg:flex">
       {/* Brand */}
       <Link
         to="/"
-        className="flex h-[76px] shrink-0 items-center gap-3 border-b border-[#e4e5df] px-6"
+        className="flex h-[76px] shrink-0 items-center gap-3 border-b border-[#e4e5df] px-6 group"
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#183d34] text-[#c5ff55]">
-          <Swords size={20} strokeWidth={2.2} />
-        </div>
+        <KnightLogo className="h-9 w-9 transition-transform duration-300 group-hover:scale-105" />
 
         <div>
           <p className="text-[15px] font-black tracking-[0.13em]">
-            KNIGHTZONE
+            KNIGHT<span className="text-emerald-700">ZONE</span>
           </p>
           <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.19em] text-[#8b948a]">
             Think. Solve. Compete.
@@ -58,101 +57,93 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-4 py-6">
-        {navigation.map((section) => (
-          <div key={section.label} className="mb-7">
-            <p className="mb-3 px-3 text-[9px] font-bold tracking-[0.18em] text-[#92998f]">
-              {section.label}
-            </p>
+        <div className="space-y-6">
+          {navigation.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b948a]">
+                {group.label}
+              </p>
 
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon;
+              <div className="mt-2 space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
 
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition ${
-                        isActive
-                          ? "bg-[#e8f2eb] text-[#183d34]"
-                          : "text-[#70796f] hover:bg-[#f0f2ed] hover:text-[#252922]"
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <Icon
-                          size={17}
-                          strokeWidth={isActive ? 2.2 : 1.8}
-                        />
-                        <span className="flex-1">{item.name}</span>
-                        {isActive && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#13836d]" />
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                );
-              })}
+                  return (
+                    <NavLink
+                      key={item.name}
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
+                          isActive
+                            ? "bg-[#183d34] text-[#c5ff55] shadow-sm shadow-[#183d34]/20"
+                            : "text-[#555d53] hover:bg-[#f0f2ed] hover:text-[#252922]"
+                        }`
+                      }
+                    >
+                      <Icon size={17} />
+                      {item.name}
+                    </NavLink>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </nav>
 
-      {/* Practice reminder */}
-      <div className="mx-4 mb-4 rounded-xl border border-[#dfe4de] bg-white p-4">
-        <div className="flex items-center gap-2 text-[#13836d]">
-          <Code2 size={16} />
-          <span className="text-[11px] font-bold">Daily practice</span>
+      {/* User Status Profile Card */}
+      {isAuthenticated && (
+        <div className="mx-4 mb-3 rounded-2xl border border-[#dfe4de] bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#183d34] text-xs font-bold text-[#c5ff55]">
+              {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-[#202722]">
+                {user?.name || user?.email?.split("@")[0]}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span
+                  className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                    isAdmin
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {isAdmin ? <ShieldCheck size={10} /> : <UserCheck size={10} />}
+                  {role}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <p className="mt-2 text-xs leading-5 text-[#727b71]">
-          Consistency beats intensity. Solve one problem at a time.
-        </p>
-
-        <Link
-          to="/problems"
-          className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#183d34] hover:text-[#13836d]"
-        >
-          Open problems <ArrowUpRight size={13} />
-        </Link>
-      </div>
+      )}
 
       {/* Footer links */}
       <div className="border-t border-[#e4e5df] p-4">
         <Link
           to="/"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#70796f] transition hover:bg-[#f0f2ed] hover:text-[#252922]"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-[#70796f] transition hover:bg-[#f0f2ed] hover:text-[#252922]"
         >
-          <CircleHelp size={16} />
+          <CircleHelp size={15} />
           Help & information
-          <ChevronRight size={14} className="ml-auto" />
-        </Link>
-
-        <Link
-          to="/dashboard"
-          className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#70796f] transition hover:bg-[#f0f2ed] hover:text-[#252922]"
-        >
-          <Settings size={16} />
-          Workspace
-          <ChevronRight size={14} className="ml-auto" />
+          <ChevronRight size={13} className="ml-auto" />
         </Link>
 
         {isAuthenticated && (
           <button
             onClick={logout}
-            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
           >
-            <LogOut size={16} />
-            Log out ({user?.name || user?.email?.split("@")[0] || "User"})
+            <LogOut size={15} />
+            Log out
           </button>
         )}
 
-        <div className="mt-3 border-t border-[#e4e5df] pt-4">
+        <div className="mt-3 border-t border-[#e4e5df] pt-3">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            KNIGHTZONE · LIVE BACKEND
+            KNIGHTZONE · CONNECTED
           </p>
         </div>
       </div>

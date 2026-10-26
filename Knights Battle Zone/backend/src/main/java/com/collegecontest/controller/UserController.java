@@ -247,7 +247,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/role")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserDTO updateUserRole(@PathVariable Long id, @RequestBody UpdateRoleRequest request) {
         if (request == null || request.getRole() == null || request.getRole().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Role is required");
@@ -261,14 +261,6 @@ public class UserController {
             targetRole = Role.valueOf(request.getRole().trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
-        }
-
-        boolean actingIsSuperAdmin = actingUser.getRole() == Role.SUPER_ADMIN;
-        boolean targetIsPrivileged = targetRole == Role.ADMIN || targetRole == Role.SUPER_ADMIN;
-        boolean currentIsPrivileged = user.getRole() == Role.ADMIN || user.getRole() == Role.SUPER_ADMIN;
-
-        if (!actingIsSuperAdmin && (targetIsPrivileged || currentIsPrivileged)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only super admin can manage admin roles");
         }
 
         user.setRole(targetRole);

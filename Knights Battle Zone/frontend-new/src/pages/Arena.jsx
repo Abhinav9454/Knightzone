@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Terminal,
 } from "lucide-react";
+import { VersusClash, KnightCrest } from "../components/svg";
 
 const matches = [
   {
@@ -81,8 +82,9 @@ const Arena = () => {
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#181c16] p-6 sm:p-9 lg:p-12"
         >
-          <div className="pointer-events-none absolute -right-10 -top-16 select-none text-[220px] font-black leading-none text-white/[0.025] sm:text-[300px]">
-            K
+          {/* Creative Knight Crest watermark */}
+          <div className="pointer-events-none absolute -right-16 -top-16 select-none opacity-15">
+            <KnightCrest className="w-96 h-96" glow={false} />
           </div>
 
           <div className="relative z-10 grid gap-9 lg:grid-cols-[1fr_320px] lg:items-center">
@@ -127,6 +129,11 @@ const Arena = () => {
                   Arena protocol
                 </span>
                 <Swords size={19} className="text-[#c5ff55]" />
+              </div>
+
+              {/* Creative Versus Clash SVG */}
+              <div className="flex justify-center my-2">
+                <VersusClash className="w-48 h-24" />
               </div>
 
               <div className="mt-6 space-y-4">

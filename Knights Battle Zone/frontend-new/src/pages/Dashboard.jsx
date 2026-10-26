@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { dashboardApi } from "../services/api";
+import { RankBadge, TrophyIllustration } from "../components/svg";
 
 const stats = [
   {
@@ -117,7 +118,7 @@ const dailyGoals = [
 ];
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, role, isAdmin } = useAuth();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -189,23 +190,36 @@ export default function DashboardPage() {
         {/* Header */}
         <header className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">
-              Dashboard
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">
+                Dashboard
+              </p>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                  isAdmin
+                    ? "bg-purple-100 text-purple-700 border border-purple-200"
+                    : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                }`}
+              >
+                {role}
+              </span>
+            </div>
 
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
               Welcome back, {displayName} 👋
             </h1>
 
-            <p className="mt-2 text-sm text-slate-600">
-              You are 120 XP away from reaching Platinum Knight.
+            <p className="mt-1 text-sm text-slate-600">
+              {isAdmin
+                ? "Admin mode active • Manage problems, contests, and monitor community progress."
+                : "Your training arena is live. Practice algorithms and level up your knight rank."}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Link
               to="/problems"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
             >
               <Code2 size={17} />
               Solve a problem
@@ -213,7 +227,7 @@ export default function DashboardPage() {
 
             <Link
               to="/arena"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
             >
               <Swords size={17} />
               Join battle
@@ -221,29 +235,33 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* XP progress */}
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
+        {/* Knight Rank Tier SVG Progress */}
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">
-                Knight Rank Progress
-              </p>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Gold Knight • 2,480 / 2,600 XP
-              </p>
+            <div className="flex items-center gap-4">
+              <RankBadge rating={summary?.currentRating ?? 1000} className="w-16 h-16" />
+              <div>
+                <p className="text-base font-bold text-slate-900">
+                  Knight Rank & Progress
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Current Rating: <span className="font-bold text-indigo-600">{summary?.currentRating ?? 1000}</span> • Global Rank: <span className="font-bold text-slate-800">#{summary?.globalRank ?? 1}</span>
+                </p>
+              </div>
             </div>
 
-            <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-600">
-              <Trophy size={15} />
-              120 XP to Platinum
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700 border border-amber-200/60">
+                <Trophy size={15} />
+                Rating {summary?.currentRating ?? 1000}
+              </span>
+            </div>
           </div>
 
           <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-400"
-              style={{ width: "78%" }}
+              className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400"
+              style={{ width: `${Math.min(100, Math.max(15, ((summary?.currentRating ?? 1000) / 2500) * 100))}%` }}
             />
           </div>
         </section>

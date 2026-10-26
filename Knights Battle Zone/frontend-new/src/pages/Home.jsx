@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, ArrowUpRight, BarChart3, BookOpen, Check, ChevronRight,
   CirclePlay, GitBranch, Search, ShieldCheck, Sparkles, Swords, Target,
   TerminalSquare, Trophy, Zap
 } from "lucide-react";
+import { BattleArenaIllustration } from "../components/svg";
 
 const problems = [
   { id: "001", title: "Two Sum", description: "Find two numbers that add up to a target.", topics: ["Array", "Hash Table"], level: "Easy", levelClass: "bg-emerald-50 text-emerald-700", acceptance: "52.4%" },
@@ -44,6 +46,8 @@ function DifficultyBadge({ level, className }) {
 }
 
 export default function Home() {
+  const [heroView, setHeroView] = useState("arena");
+
   return (
     <main className="min-h-screen bg-[#F7F8FA] text-slate-900">
       <section className="relative overflow-hidden border-b border-slate-200 bg-white">
@@ -51,7 +55,9 @@ export default function Home() {
         <div className="pointer-events-none absolute -bottom-40 left-[28%] h-80 w-80 rounded-full bg-amber-50 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl gap-12 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-24">
           <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-700"><Sparkles size={14} /> A BETTER WAY TO PRACTICE DSA</div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-700">
+              <Sparkles size={14} /> A BETTER WAY TO PRACTICE DSA
+            </div>
             <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
               Become the kind of <span className="block text-orange-600">developer who solves.</span>
             </h1>
@@ -59,8 +65,12 @@ export default function Home() {
               Practice with purpose, understand patterns, and challenge yourself. KBZ brings problem-solving practice and competitive coding into one focused workspace.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link to="/problems" className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200">Explore problems <ArrowRight size={17} /></Link>
-              <Link to="/contests" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"><Trophy size={16} /> Browse contests</Link>
+              <Link to="/problems" className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200">
+                Explore problems <ArrowRight size={17} />
+              </Link>
+              <Link to="/contests" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50">
+                <Trophy size={16} /> Browse contests
+              </Link>
             </div>
             <div className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-sm text-slate-500">
               <span className="inline-flex items-center gap-2"><Check size={16} className="text-emerald-600" /> Practice by topic</span>
@@ -70,31 +80,76 @@ export default function Home() {
 
           <div className="mx-auto w-full max-w-xl">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.3)]">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3.5">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><TerminalSquare size={17} className="text-orange-600" /> Problem workspace</div>
-                <span className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-500">JavaScript</span>
-              </div>
-              <div className="grid md:grid-cols-[0.88fr_1.12fr]">
-                <div className="border-b border-slate-200 p-4 md:border-b-0 md:border-r">
-                  <div className="flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Problem 001</span><DifficultyBadge level="Easy" className="bg-emerald-50 text-emerald-700" /></div>
-                  <h3 className="mt-3 text-base font-bold text-slate-900">Two Sum</h3>
-                  <p className="mt-2 text-xs leading-5 text-slate-600">Given an array of integers, return the indices of two numbers that add up to the target.</p>
-                  <div className="mt-4 rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Example</p><p className="mt-1 font-mono text-xs text-slate-700">nums = [2, 7, 11, 15]</p><p className="font-mono text-xs text-slate-700">target = 9</p><p className="mt-1 font-mono text-xs font-semibold text-emerald-700">Output: [0, 1]</p></div>
+              {/* Header with Switcher Tabs */}
+              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setHeroView("arena")}
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                      heroView === "arena"
+                        ? "bg-orange-500 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Swords size={13} />
+                    Battle Arena
+                  </button>
+                  <button
+                    onClick={() => setHeroView("editor")}
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                      heroView === "editor"
+                        ? "bg-orange-500 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <TerminalSquare size={13} />
+                    Workspace
+                  </button>
                 </div>
-                <div className="bg-[#FCFCFD] p-4">
-                  <div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-slate-700">Solution.js</span><span className="text-[10px] text-slate-400">Editor preview</span></div>
-                  <div className="space-y-2 font-mono text-[11px] leading-5">
-                    <div><span className="mr-3 text-slate-300">1</span><span className="text-violet-600">function</span> <span className="text-blue-700">twoSum</span>(nums, target) {"{"}</div>
-                    <div><span className="mr-3 text-slate-300">2</span><span className="pl-3 text-violet-600">const</span> seen = <span className="text-violet-600">new</span> Map();</div>
-                    <div><span className="mr-3 text-slate-300">3</span><span className="pl-3 text-violet-600">for</span> (<span className="text-violet-600">let</span> i = 0; i &lt; nums.length; i++) {"{"}</div>
-                    <div><span className="mr-3 text-slate-300">4</span><span className="pl-6 text-violet-600">const</span> need = target - nums[i];</div>
-                    <div><span className="mr-3 text-slate-300">5</span><span className="pl-6 text-violet-600">if</span> (seen.has(need)) <span className="text-slate-400">...</span></div>
-                    <div><span className="mr-3 text-slate-300">6</span><span className="pl-3 text-slate-500">{"}"}</span></div>
-                    <div><span className="mr-3 text-slate-300">7</span><span className="text-slate-500">{"}"}</span></div>
+                <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold text-slate-500 uppercase">
+                  {heroView === "arena" ? "Live Arena" : "JavaScript"}
+                </span>
+              </div>
+
+              {heroView === "arena" ? (
+                <div className="p-5 bg-gradient-to-b from-white to-slate-50/50 flex flex-col items-center">
+                  <BattleArenaIllustration className="w-full h-auto max-h-[290px]" />
+                  <div className="flex items-center justify-between w-full border-t border-slate-100 pt-3 mt-1">
+                    <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      500+ Algorithmic Challenges Ready
+                    </span>
+                    <Link
+                      to="/arena"
+                      className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                    >
+                      Enter Arena <ArrowRight size={13} />
+                    </Link>
                   </div>
-                  <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-[10px] text-slate-400">Example interface only</span><span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><CirclePlay size={13} /> Run</span></div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid md:grid-cols-[0.88fr_1.12fr]">
+                  <div className="border-b border-slate-200 p-4 md:border-b-0 md:border-r">
+                    <div className="flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Problem 001</span><DifficultyBadge level="Easy" className="bg-emerald-50 text-emerald-700" /></div>
+                    <h3 className="mt-3 text-base font-bold text-slate-900">Two Sum</h3>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">Given an array of integers, return the indices of two numbers that add up to the target.</p>
+                    <div className="mt-4 rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Example</p><p className="mt-1 font-mono text-xs text-slate-700">nums = [2, 7, 11, 15]</p><p className="font-mono text-xs text-slate-700">target = 9</p><p className="mt-1 font-mono text-xs font-semibold text-emerald-700">Output: [0, 1]</p></div>
+                  </div>
+                  <div className="bg-[#FCFCFD] p-4">
+                    <div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-slate-700">Solution.js</span><span className="text-[10px] text-slate-400">Editor preview</span></div>
+                    <div className="space-y-2 font-mono text-[11px] leading-5">
+                      <div><span className="mr-3 text-slate-300">1</span><span className="text-violet-600">function</span> <span className="text-blue-700">twoSum</span>(nums, target) {"{"}</div>
+                      <div><span className="mr-3 text-slate-300">2</span><span className="pl-3 text-violet-600">const</span> seen = <span className="text-violet-600">new</span> Map();</div>
+                      <div><span className="mr-3 text-slate-300">3</span><span className="pl-3 text-violet-600">for</span> (<span className="text-violet-600">let</span> i = 0; i &lt; nums.length; i++) {"{"}</div>
+                      <div><span className="mr-3 text-slate-300">4</span><span className="pl-6 text-violet-600">const</span> need = target - nums[i];</div>
+                      <div><span className="mr-3 text-slate-300">5</span><span className="pl-6 text-violet-600">if</span> (seen.has(need)) <span className="text-slate-400">...</span></div>
+                      <div><span className="mr-3 text-slate-300">6</span><span className="pl-3 text-slate-500">{"}"}</span></div>
+                      <div><span className="mr-3 text-slate-300">7</span><span className="text-slate-500">{"}"}</span></div>
+                    </div>
+                    <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-[10px] text-slate-400">Example interface only</span><span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><CirclePlay size={13} /> Run</span></div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="rounded-xl border border-slate-200 bg-white p-3 text-center"><BookOpen className="mx-auto text-orange-600" size={18} /><p className="mt-2 text-xs font-bold text-slate-900">Practice</p><p className="mt-1 text-[10px] text-slate-500">Build foundations</p></div>

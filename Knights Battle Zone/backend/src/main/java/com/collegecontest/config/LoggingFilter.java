@@ -81,10 +81,8 @@ public class LoggingFilter extends OncePerRequestFilter {
         }
         String path = request.getRequestURI() == null ? "" : request.getRequestURI();
         boolean adminRoute = path.startsWith("/admin")
-                || path.startsWith("/super-admin")
-                || path.startsWith("/api/admin")
-                || path.startsWith("/api/super-admin");
-        boolean privilegedActor = roles.contains("ROLE_ADMIN") || roles.contains("ROLE_SUPER_ADMIN");
+                || path.startsWith("/api/admin");
+        boolean privilegedActor = roles.contains("ROLE_ADMIN");
         return adminRoute || privilegedActor;
     }
 }

@@ -1,7 +1,7 @@
 package com.collegecontest.model;
 
 public enum Role {
-    STUDENT,
+    USER,
     ADMIN,
-    SUPER_ADMIN
+    STUDENT
 }

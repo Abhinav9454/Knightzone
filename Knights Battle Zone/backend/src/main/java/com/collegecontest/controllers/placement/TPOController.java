@@ -12,7 +12,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/placement/tpo")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+@PreAuthorize("hasRole('ADMIN')")
 public class TPOController {
     private final DashboardService dashboardService;
 

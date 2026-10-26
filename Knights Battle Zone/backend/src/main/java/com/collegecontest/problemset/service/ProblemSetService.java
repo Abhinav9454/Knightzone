@@ -169,7 +169,7 @@ public class ProblemSetService {
     }
 
     private User resolveContestOwner() {
-        List<User> admins = userRepository.findByRoleIn(List.of(Role.SUPER_ADMIN, Role.ADMIN));
+        List<User> admins = userRepository.findByRoleIn(List.of(Role.ADMIN));
         if (!admins.isEmpty()) {
             return admins.get(0);
         }

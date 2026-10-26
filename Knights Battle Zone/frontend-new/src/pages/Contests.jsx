@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { contestsApi } from "../services/api";
+import { TrophyIllustration } from "../components/svg";
 
 const contests = [
   {
@@ -172,22 +173,25 @@ export default function Contests() {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 lg:w-80">
-              {[
-                { label: "Upcoming", value: contestList.length },
-                { label: "Problems", value: "15" },
-                { label: "Format", value: "Timed" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-slate-200 p-4"
-                >
-                  <p className="text-xl font-bold text-slate-900">
-                    {item.value}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">{item.label}</p>
-                </div>
-              ))}
+            <div className="flex items-center gap-6">
+              <TrophyIllustration className="hidden sm:block w-28 h-28 shrink-0 drop-shadow-md" />
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:w-72">
+                {[
+                  { label: "Upcoming", value: contestList.length },
+                  { label: "Problems", value: "15+" },
+                  { label: "Format", value: "Timed" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/50 p-3 sm:p-4 text-center"
+                  >
+                    <p className="text-xl font-bold text-slate-900">
+                      {item.value}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">{item.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </header>

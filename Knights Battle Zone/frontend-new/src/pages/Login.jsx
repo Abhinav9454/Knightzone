@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { KnightLogo, KnightCrest } from "../components/svg";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -46,14 +47,13 @@ const Login = () => {
     <main className="grid min-h-screen bg-[#f7f8f6] text-[#202722] lg:grid-cols-[1.05fr_0.95fr]">
       {/* Brand panel */}
       <section className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-[#183d34] p-10 text-white lg:flex xl:p-14">
-        <div className="pointer-events-none absolute -right-16 top-1/4 select-none text-[330px] font-black leading-none text-white/[0.035]">
-          K
+        {/* Creative Knight Crest SVG Watermark */}
+        <div className="pointer-events-none absolute -right-12 top-1/4 select-none opacity-25">
+          <KnightCrest className="w-[420px] h-[420px]" glow={true} />
         </div>
 
-        <Link to="/" className="relative z-10 flex w-fit items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#c5ff55] text-[#183d34]">
-            <Swords size={23} />
-          </span>
+        <Link to="/" className="relative z-10 flex w-fit items-center gap-3 group">
+          <KnightLogo className="h-11 w-11 transition-transform duration-300 group-hover:scale-110" />
           <span className="text-lg font-black tracking-[0.15em]">
             KNIGHTZONE
           </span>

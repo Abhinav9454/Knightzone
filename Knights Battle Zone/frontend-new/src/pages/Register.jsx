@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { KnightLogo, KnightCrest } from "../components/svg";
 
 const accountTypes = [
   {
@@ -153,14 +154,13 @@ const Register = () => {
     <main className="min-h-screen bg-[#f7f8f6] text-[#202722] lg:grid lg:grid-cols-[0.88fr_1.12fr]">
       {/* Brand panel */}
       <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-[#183d34] p-10 text-white lg:flex xl:p-14">
-        <div className="pointer-events-none absolute -right-20 top-1/4 select-none text-[360px] font-black leading-none text-white/[0.035]">
-          K
+        {/* Creative Knight Crest SVG Watermark */}
+        <div className="pointer-events-none absolute -right-16 top-1/4 select-none opacity-25">
+          <KnightCrest className="w-[450px] h-[450px]" glow={true} />
         </div>
 
-        <Link to="/" className="relative z-10 flex w-fit items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#c5ff55] text-[#183d34]">
-            <Swords size={23} />
-          </span>
+        <Link to="/" className="relative z-10 flex w-fit items-center gap-3 group">
+          <KnightLogo className="h-11 w-11 transition-transform duration-300 group-hover:scale-110" />
           <span className="text-lg font-black tracking-[0.15em]">
             KNIGHTZONE
           </span>

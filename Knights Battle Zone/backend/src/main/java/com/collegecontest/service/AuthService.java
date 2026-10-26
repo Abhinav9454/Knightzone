@@ -81,7 +81,7 @@ public class AuthService {
         user.setUsername(generateUniqueUsername(req.getName(), normalizedEmail));
         user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setRole(Role.STUDENT);
+        user.setRole(Role.USER);
         user.setPublicUserId(userPublicIdService.generateUniquePublicUserId());
 
         User savedUser = userRepository.save(user);
@@ -235,7 +235,7 @@ public class AuthService {
         if (user.getRole() == Role.ADMIN
                 && user.getAdminExpiresAt() != null
                 && user.getAdminExpiresAt().isBefore(LocalDateTime.now())) {
-            user.setRole(Role.STUDENT);
+            user.setRole(Role.USER);
             user.setAdminExpiresAt(null);
             return userRepository.save(user);
         }
@@ -298,7 +298,7 @@ public class AuthService {
         user.setUsername(generateUniqueUsername(displayName, normalizedEmail));
         user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(generateSecureToken()));
-        user.setRole(Role.STUDENT);
+        user.setRole(Role.USER);
         user.setEmailVerified(true);
         user.setAvatarUrl(googleProfile.pictureUrl());
         user.setPublicUserId(userPublicIdService.generateUniquePublicUserId());

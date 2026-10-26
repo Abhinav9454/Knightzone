@@ -204,7 +204,7 @@ public class ContestService {
         User actingUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        boolean isAdmin = actingUser.getRole() == Role.ADMIN || actingUser.getRole() == Role.SUPER_ADMIN;
+        boolean isAdmin = actingUser.getRole() == Role.ADMIN;
         boolean isCreator = contest.getCreatedBy() != null && contest.getCreatedBy().getId().equals(actingUser.getId());
         if (!isAdmin && !isCreator) {
             throw new RuntimeException("Only contest creator or admin can update this contest");
@@ -247,9 +247,9 @@ public class ContestService {
         User actingUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
-        boolean isAdmin = actingUser.getRole() == Role.ADMIN || actingUser.getRole() == Role.SUPER_ADMIN;
+        boolean isAdmin = actingUser.getRole() == Role.ADMIN;
         if (!isAdmin) {
-            throw new RuntimeException("Only admin or super admin can delete this contest");
+            throw new RuntimeException("Only admin can delete this contest");
         }
 
         List<Long> problemIds = problemRepository.findIdsByContestId(contestId);

@@ -42,13 +42,13 @@ public class ProblemSetController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProblemDTO createProblem(@Valid @RequestBody ProblemSetUpsertRequest request) {
         return problemSetService.createProblem(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProblemDTO updateProblem(
             @PathVariable Long id,
             @Valid @RequestBody ProblemSetUpsertRequest request) {
@@ -57,7 +57,7 @@ public class ProblemSetController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteProblem(@PathVariable Long id) {
         problemSetService.deleteProblem(id);
     }

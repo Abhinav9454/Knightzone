@@ -23,13 +23,13 @@ public class ApplicationController {
     private final UserRepository userRepository;
 
     @GetMapping("/my")
-    @PreAuthorize("hasAnyRole('STUDENT','ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER','STUDENT','ADMIN')")
     public List<Application> myApplications() {
         return applicationService.getApplicationsForStudent(currentUser().getId());
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Application updateStatus(@PathVariable Long id, @RequestParam Application.Status status, @RequestParam(required = false) String comments) {
         return applicationService.updateStatus(id, status, comments);
     }

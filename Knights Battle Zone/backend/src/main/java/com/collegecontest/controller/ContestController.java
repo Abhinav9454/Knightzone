@@ -71,7 +71,7 @@ public class ContestController {
     @PostMapping
     @Operation(summary = "Create a new contest", responses = {
             @ApiResponse(responseCode = "200", description = "Contest created") })
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ContestDTO createContest(@RequestBody @jakarta.validation.Valid ContestDTO contestDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -84,7 +84,7 @@ public class ContestController {
     @PostMapping("/{contestId}/problems")
     @Operation(summary = "Add a problem to a contest", responses = {
             @ApiResponse(responseCode = "200", description = "Problem added") })
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProblemDTO addProblem(@PathVariable Long contestId,
             @RequestBody @jakarta.validation.Valid ProblemDTO problemDTO) {
         return contestService.addProblemToContest(contestId, problemDTO);
@@ -93,7 +93,7 @@ public class ContestController {
     @PutMapping("/{id}")
     @Operation(summary = "Update contest timings/details", responses = {
             @ApiResponse(responseCode = "200", description = "Contest updated") })
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ContestDTO updateContest(@PathVariable Long id, @RequestBody ContestDTO contestDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -106,7 +106,7 @@ public class ContestController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete contest", responses = {
             @ApiResponse(responseCode = "204", description = "Contest deleted") })
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteContest(@PathVariable Long id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
