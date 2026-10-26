@@ -11,6 +11,10 @@ import {
   LogOut,
   ShieldCheck,
   UserCheck,
+  HelpCircle,
+  Users,
+  Keyboard,
+  Briefcase,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { KnightLogo } from "./svg";
@@ -29,6 +33,21 @@ const navigation = [
       { name: "Contests", path: "/contests", icon: Trophy },
       { name: "Arena", path: "/arena", icon: Gamepad2 },
       { name: "Leaderboard", path: "/leaderboard", icon: Medal },
+    ],
+  },
+  {
+    label: "COMMUNITY & PRACTICE",
+    items: [
+      { name: "Quizzes", path: "/quizzes", icon: HelpCircle },
+      { name: "Clubs & Guilds", path: "/clubs", icon: Users },
+      { name: "Speed Typing", path: "/typing", icon: Keyboard },
+    ],
+  },
+  {
+    label: "CAREER & PROFILE",
+    items: [
+      { name: "Careers & Jobs", path: "/jobs", icon: Briefcase },
+      { name: "Knight Profile", path: "/profile", icon: UserCheck },
     ],
   },
 ];
@@ -93,7 +112,10 @@ const Sidebar = () => {
 
       {/* User Status Profile Card */}
       {isAuthenticated && (
-        <div className="mx-4 mb-3 rounded-2xl border border-[#dfe4de] bg-white p-3 shadow-sm">
+        <Link
+          to="/profile"
+          className="mx-4 mb-3 block rounded-2xl border border-[#dfe4de] bg-white p-3 shadow-sm hover:border-[#183d34]/40 hover:shadow-md transition"
+        >
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#183d34] text-xs font-bold text-[#c5ff55]">
               {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
@@ -116,7 +138,7 @@ const Sidebar = () => {
               </div>
             </div>
           </div>
-        </div>
+        </Link>
       )}
 
       {/* Footer links */}

@@ -14,6 +14,13 @@ import Contests from "./pages/Contests";
 import Arena from "./pages/Arena";
 import Leaderboard from "./pages/Leaderboard";
 import ProblemDetails from "./pages/ProblemDetails";
+import Quizzes from "./pages/Quizzes";
+import QuizAttempt from "./pages/QuizAttempt";
+import Clubs from "./pages/Clubs";
+import ClubDetails from "./pages/ClubDetails";
+import TypingSpeed from "./pages/TypingSpeed";
+import Jobs from "./pages/Jobs";
+import Profile from "./pages/Profile";
 
 const App = () => {
   return (
@@ -43,6 +50,15 @@ const App = () => {
             <Route path="/arena" element={<Arena />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/problems/:id" element={<ProblemDetails />} />
+
+            {/* Missing backend modules added */}
+            <Route path="/quizzes" element={<Quizzes />} />
+            <Route path="/quizzes/:id" element={<QuizAttempt />} />
+            <Route path="/clubs" element={<Clubs />} />
+            <Route path="/clubs/:id" element={<ClubDetails />} />
+            <Route path="/typing" element={<TypingSpeed />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
         </Routes>
       </AuthProvider>

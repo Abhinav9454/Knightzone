@@ -13,6 +13,10 @@ import {
   XCircle,
   CalendarDays,
   Loader2,
+  HelpCircle,
+  Users,
+  Keyboard,
+  Briefcase,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { dashboardApi } from "../services/api";
@@ -290,6 +294,102 @@ export default function DashboardPage() {
               <p className="mt-1 text-xs text-slate-500">{change}</p>
             </article>
           ))}
+        </section>
+
+        {/* Quick Arena Modules Hub */}
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Arena Modules & Activities
+              </h2>
+              <p className="text-xs text-slate-500">
+                Sharpen multiple facets of your engineering & competitive coding profile
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Link
+              to="/quizzes"
+              className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-[#183d34] hover:bg-slate-50"
+            >
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 mb-3">
+                  <HelpCircle size={20} />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700">
+                  Concept Quizzes
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  Timed multiple-choice assessments in C, C++, Java, and algorithms.
+                </p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                Take Quiz <ArrowRight size={13} />
+              </span>
+            </Link>
+
+            <Link
+              to="/clubs"
+              className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-[#183d34] hover:bg-slate-50"
+            >
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 mb-3">
+                  <Users size={20} />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-700">
+                  Knights Guilds
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  Join 24 coding squads, participate in club challenges and discussions.
+                </p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-blue-700">
+                Browse Clubs <ArrowRight size={13} />
+              </span>
+            </Link>
+
+            <Link
+              to="/typing"
+              className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-[#183d34] hover:bg-slate-50"
+            >
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700 mb-3">
+                  <Keyboard size={20} />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-700">
+                  Speed Typing
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  High-velocity keystroke benchmarks on real programming snippets.
+                </p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-amber-700">
+                Start Test <ArrowRight size={13} />
+              </span>
+            </Link>
+
+            <Link
+              to="/jobs"
+              className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-[#183d34] hover:bg-slate-50"
+            >
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-700 mb-3">
+                  <Briefcase size={20} />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-700">
+                  Career Drives
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  Direct hiring pipelines, internships, and engineering job openings.
+                </p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-purple-700">
+                View Jobs <ArrowRight size={13} />
+              </span>
+            </Link>
+          </div>
         </section>
 
         {/* Main grid */}

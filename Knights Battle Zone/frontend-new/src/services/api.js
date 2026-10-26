@@ -141,4 +141,137 @@ export const submissionsApi = {
   },
 };
 
+export const quizzesApi = {
+  getAll: async (page = 0, size = 20) => {
+    const response = await API.get("/quizzes", { params: { page, size } });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await API.get(`/quizzes/${id}`);
+    return response.data;
+  },
+
+  submitAttempt: async (attempt) => {
+    const response = await API.post("/quiz-attempts", attempt);
+    return response.data;
+  },
+
+  getMyAttempts: async () => {
+    const response = await API.get("/quiz-attempts/my");
+    return response.data;
+  },
+};
+
+export const clubsApi = {
+  getAll: async () => {
+    const response = await API.get("/clubs");
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await API.get(`/clubs/${id}`);
+    return response.data;
+  },
+
+  createClub: async (data) => {
+    const response = await API.post("/clubs", data);
+    return response.data;
+  },
+
+  join: async (id) => {
+    const response = await API.post(`/clubs/${id}/join`);
+    return response.data;
+  },
+
+  leave: async (id) => {
+    const response = await API.post(`/clubs/${id}/leave`);
+    return response.data;
+  },
+
+  getPosts: async (id) => {
+    const response = await API.get(`/clubs/${id}/posts`);
+    return response.data;
+  },
+
+  createPost: async (id, data) => {
+    const response = await API.post(`/clubs/${id}/posts`, data);
+    return response.data;
+  },
+
+  getRankings: async (id) => {
+    const response = await API.get(`/clubs/${id}/rankings`);
+    return response.data;
+  },
+};
+
+export const typingApi = {
+  getRandomText: async (params = {}) => {
+    const response = await API.get("/typing/texts/random", { params });
+    return response.data;
+  },
+
+  submitResult: async (result) => {
+    const response = await API.post("/typing/score", result);
+    return response.data;
+  },
+
+  getLeaderboard: async (params = {}) => {
+    const response = await API.get("/typing/leaderboard", { params });
+    return response.data;
+  },
+
+  getProfile: async () => {
+    const response = await API.get("/typing/profile");
+    return response.data;
+  },
+};
+
+export const jobsApi = {
+  getAll: async () => {
+    const response = await API.get("/placement/jobs");
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await API.get(`/placement/jobs/${id}`);
+    return response.data;
+  },
+
+  apply: async (jobId, data) => {
+    const response = await API.post(`/placement/jobs/${jobId}/apply`, data);
+    return response.data;
+  },
+
+  getMyApplications: async () => {
+    const response = await API.get("/placement/applications/my");
+    return response.data;
+  },
+};
+
+export const profileApi = {
+  getMe: async () => {
+    const response = await API.get("/users/me");
+    return response.data;
+  },
+
+  updateProfile: async (data) => {
+    const response = await API.put("/users/profile", data);
+    return response.data;
+  },
+
+  uploadAvatar: async (formData) => {
+    const response = await API.post("/users/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  removeAvatar: async () => {
+    const response = await API.delete("/users/avatar");
+    return response.data;
+  },
+};
+
 export default API;
+
