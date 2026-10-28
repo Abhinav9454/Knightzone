@@ -15,7 +15,7 @@ const AppLayout = () => {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { isNight } = useTheme();
-  const { isAdmin, adminMode, setAdminMode } = useAuth();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const closeMenu = () => setMenuOpen(false);
@@ -157,29 +157,8 @@ const AppLayout = () => {
         </div>
       </header>
 
-      {/* Admin Candidate Preview Mode Banner */}
-      {isAdmin && !adminMode && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white px-4 py-2 text-xs font-bold flex items-center justify-between border-b border-purple-500/30 shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-            <ShieldAlert size={14} className="text-purple-300" />
-            <span>Candidate Preview Active: You are viewing KnightZone as a candidate.</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setAdminMode(true);
-              navigate("/admin");
-            }}
-            className="rounded-lg bg-white/20 hover:bg-white/30 text-white px-3 py-1 text-[11px] font-black uppercase tracking-wider transition"
-          >
-            Return to Admin Console
-          </button>
-        </div>
-      )}
-
       {/* Page content - with responsive top spacing on mobile and left offset on desktop */}
-      <div className={`min-h-screen pt-16 lg:pl-[72px] lg:pt-0 transition-all duration-300 ${isAdmin && !adminMode ? "pt-24 lg:pt-10" : ""}`}>
+      <div className="min-h-screen pt-16 lg:pl-[72px] lg:pt-0 transition-all duration-300">
         <Outlet />
       </div>
 

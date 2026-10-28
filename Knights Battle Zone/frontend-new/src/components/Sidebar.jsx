@@ -68,60 +68,39 @@ const candidateNavigation = [
   },
 ];
 
-// Exclusive Admin Console Navigation (Candidate clutter hidden)
-const adminNavigation = [
-  {
-    label: "COMMAND CENTER",
-    items: [
-      { name: "Executive Overview", path: "/admin/overview", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "COMPETITIONS & REPO",
-    items: [
-      { name: "Contest Studio", path: "/admin/contests", icon: Trophy },
-      { name: "Problem Engineering", path: "/admin/problems", icon: Code2 },
-      { name: "Quiz Engine", path: "/admin/quizzes", icon: HelpCircle },
-    ],
-  },
-  {
-    label: "INTEGRITY & PROCTORING",
-    items: [
-      { name: "Anti-Cheat & 3-Strike", path: "/admin/anti-cheat", icon: ShieldAlert },
-      { name: "Knights & Roles", path: "/admin/users", icon: Users },
-    ],
-  },
-  {
-    label: "OPERATIONS & CAREERS",
-    items: [
-      { name: "Job Openings", path: "/admin/jobs", icon: Briefcase },
-      { name: "Live Support Desk", path: "/admin/support", icon: LifeBuoy },
-    ],
-  },
-];
-
 const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const { user, role, isAdmin, adminMode, toggleAdminMode, isAuthenticated, logout } = useAuth();
+  const { user, role, isAdmin, isAuthenticated, logout } = useAuth();
   const { isNight } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // If user is Admin and adminMode is active: ONLY show admin tools, hide candidate stuff!
-  const isDedicatedAdminView = isAdmin && adminMode !== false;
-  const navGroups = isDedicatedAdminView ? adminNavigation : candidateNavigation;
+  // Unified Navigation: Always preserve standard platform pages, add Admin Console for administrators
+  const navGroups = isAdmin
+    ? [
+        ...candidateNavigation,
+        {
+          label: "ADMINISTRATION",
+          items: [
+            {
+              name: "Admin Console",
+              path: "/admin",
+              icon: ShieldAlert,
+              isAdminOnly: true,
+            },
+          ],
+        },
+      ]
+    : candidateNavigation;
 
-  // Custom active matcher for smooth sub-routes and /admin fallback
+  // Custom active matcher
   const isItemActive = (itemPath) => {
     const cur = location.pathname;
-    if (itemPath === "/admin/overview") {
-      return cur === "/admin" || cur === "/admin/" || cur === "/admin/overview";
-    }
-    if (itemPath === "/admin/anti-cheat") {
-      return cur === "/admin/anti-cheat" || cur === "/admin/integrity";
+    if (itemPath === "/admin") {
+      return cur === "/admin" || cur.startsWith("/admin/");
     }
     if (cur === itemPath) return true;
-    if (itemPath !== "/admin" && itemPath !== "/dashboard" && cur.startsWith(itemPath)) {
+    if (itemPath !== "/dashboard" && cur.startsWith(itemPath)) {
       return true;
     }
     return false;
@@ -153,7 +132,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
           }`}
         >
           <Link
-            to={isDedicatedAdminView ? "/admin" : "/"}
+            to="/"
             onClick={onClose}
             className="flex items-center gap-2.5"
           >
@@ -161,14 +140,14 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
             <div>
               <p className={`text-sm font-black tracking-[0.13em] ${isNight ? "text-white" : "text-slate-900"}`}>
                 KNIGHT
-                <span className={isDedicatedAdminView ? "text-purple-400" : isNight ? "text-[#c5ff55]" : "text-emerald-600"}>
-                  {isDedicatedAdminView ? "ADMIN" : "ZONE"}
+                <span className={isNight ? "text-[#c5ff55]" : "text-emerald-600"}>
+                  ZONE
                 </span>
               </p>
               <p className={`text-[9px] font-bold uppercase tracking-[0.19em] ${
-                isDedicatedAdminView ? "text-purple-300/80" : isNight ? "text-[#95a390]" : "text-slate-500"
+                isNight ? "text-[#95a390]" : "text-slate-500"
               }`}>
-                {isDedicatedAdminView ? "Enterprise Console" : "Think. Solve. Compete."}
+                Think. Solve. Compete.
               </p>
             </div>
           </Link>
@@ -194,8 +173,8 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
               <div key={group.label}>
                 <p
                   className={`px-3 text-[10px] font-black font-mono uppercase tracking-[0.2em] whitespace-nowrap ${
-                    isDedicatedAdminView
-                      ? "text-purple-400/90"
+                    group.label === "ADMINISTRATION"
+                      ? "text-purple-400 font-bold"
                       : isNight
                       ? "text-[#95a390]"
                       : "text-slate-500"
@@ -208,6 +187,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const active = isItemActive(item.path);
+                    const isAdminItem = item.isAdminOnly;
 
                     return (
                       <NavLink
@@ -216,11 +196,15 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                         onClick={onClose}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-200 ${
                           active
-                            ? isDedicatedAdminView
-                              ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20"
+                            ? isAdminItem
+                              ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20 font-bold"
                               : isNight
-                              ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10"
-                              : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20"
+                              ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
+                              : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
+                            : isAdminItem
+                            ? isNight
+                              ? "text-purple-300/80 hover:bg-purple-500/10 hover:text-purple-200"
+                              : "text-purple-700 hover:bg-purple-50 hover:text-purple-900"
                             : isNight
                             ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -230,17 +214,26 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                           size={17}
                           className={`shrink-0 ${
                             active
-                              ? isDedicatedAdminView
+                              ? isAdminItem
                                 ? "text-purple-300"
                                 : isNight
                                 ? "text-[#c5ff55]"
                                 : "text-white"
+                              : isAdminItem
+                              ? isNight
+                                ? "text-purple-400"
+                                : "text-purple-600"
                               : isNight
                               ? "text-[#c2cbbe]"
                               : "text-slate-500"
                           }`}
                         />
                         <span className="flex-1">{item.name}</span>
+                        {isAdminItem && (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            Admin
+                          </span>
+                        )}
                         <ChevronRight
                           size={14}
                           className={
@@ -289,7 +282,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
               >
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
-                    isDedicatedAdminView
+                    isAdmin
                       ? "bg-purple-600 text-white"
                       : isNight
                       ? "bg-[#c5ff55] text-[#14170f]"
@@ -318,26 +311,6 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                   </span>
                 </div>
               </div>
-
-              {/* Admin View Mode Switcher */}
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleAdminMode();
-                    if (isDedicatedAdminView) {
-                      navigate("/dashboard");
-                    } else {
-                      navigate("/admin");
-                    }
-                    onClose();
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-2 text-xs font-bold text-purple-300 transition hover:bg-purple-500/20"
-                >
-                  <ArrowRightLeft size={13} />
-                  {isDedicatedAdminView ? "Switch to Candidate View" : "Return to Admin Console"}
-                </button>
-              )}
 
               <button
                 type="button"
@@ -383,7 +356,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
       >
         {/* Brand Header */}
         <Link
-          to={isDedicatedAdminView ? "/admin" : "/"}
+          to="/"
           className={`flex h-[72px] shrink-0 items-center border-b transition-all duration-300 ${
             isNight ? "border-white/10" : "border-slate-200"
           } ${isHovered ? "gap-3 px-5" : "justify-center px-2"}`}
@@ -399,14 +372,14 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
             <div className="overflow-hidden whitespace-nowrap transition-opacity duration-300">
               <p className={`text-[15px] font-black tracking-[0.13em] ${isNight ? "text-white" : "text-slate-900"}`}>
                 KNIGHT
-                <span className={isDedicatedAdminView ? "text-purple-400" : isNight ? "text-[#c5ff55]" : "text-emerald-600"}>
-                  {isDedicatedAdminView ? "ADMIN" : "ZONE"}
+                <span className={isNight ? "text-[#c5ff55]" : "text-emerald-600"}>
+                  ZONE
                 </span>
               </p>
               <p className={`text-[9px] font-bold uppercase tracking-[0.19em] ${
-                isDedicatedAdminView ? "text-purple-300/80" : isNight ? "text-[#95a390]" : "text-slate-500"
+                isNight ? "text-[#95a390]" : "text-slate-500"
               }`}>
-                {isDedicatedAdminView ? "Enterprise Console" : "Think. Solve. Compete."}
+                Think. Solve. Compete.
               </p>
             </div>
           )}
@@ -420,8 +393,8 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                 {isHovered ? (
                   <p
                     className={`px-3 text-[10px] font-black font-mono uppercase tracking-[0.2em] whitespace-nowrap ${
-                      isDedicatedAdminView
-                        ? "text-purple-400/90"
+                      group.label === "ADMINISTRATION"
+                        ? "text-purple-400 font-bold"
                         : isNight
                         ? "text-[#95a390]"
                         : "text-slate-500"
@@ -437,6 +410,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const active = isItemActive(item.path);
+                    const isAdminItem = item.isAdminOnly;
 
                     return (
                       <NavLink
@@ -447,22 +421,30 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                           isHovered
                             ? `gap-3 px-3 py-2.5 ${
                                 active
-                                  ? isDedicatedAdminView
+                                  ? isAdminItem
                                     ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20 font-bold"
                                     : isNight
                                     ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
                                     : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
+                                  : isAdminItem
+                                  ? isNight
+                                    ? "text-purple-300/80 hover:bg-purple-500/10 hover:text-purple-200"
+                                    : "text-purple-700 hover:bg-purple-50 hover:text-purple-900"
                                   : isNight
                                   ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
                                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                               }`
                             : `h-11 w-11 justify-center mx-auto ${
                                 active
-                                  ? isDedicatedAdminView
+                                  ? isAdminItem
                                     ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20 font-bold"
                                     : isNight
                                     ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
                                     : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
+                                  : isAdminItem
+                                  ? isNight
+                                    ? "text-purple-300/80 hover:bg-purple-500/10 hover:text-purple-200"
+                                    : "text-purple-700 hover:bg-purple-50 hover:text-purple-900"
                                   : isNight
                                   ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
                                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -473,20 +455,29 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                           size={isHovered ? 17 : 19}
                           className={`shrink-0 ${
                             active
-                              ? isDedicatedAdminView
+                              ? isAdminItem
                                 ? "text-purple-300"
                                 : isNight
                                 ? "text-[#c5ff55]"
                                 : "text-white"
+                              : isAdminItem
+                              ? isNight
+                                ? "text-purple-400"
+                                : "text-purple-600"
                               : isNight
                               ? "text-[#c2cbbe]"
                               : "text-slate-500"
                           }`}
                         />
                         {isHovered && (
-                          <span className="overflow-hidden whitespace-nowrap">
-                            {item.name}
-                          </span>
+                          <div className="flex-1 flex items-center justify-between min-w-0">
+                            <span className="truncate">{item.name}</span>
+                            {isAdminItem && (
+                              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 ml-1.5 shrink-0">
+                                Admin
+                              </span>
+                            )}
+                          </div>
                         )}
                       </NavLink>
                     );
@@ -527,7 +518,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                 >
                   <div
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
-                      isDedicatedAdminView
+                      isAdmin
                         ? "bg-purple-600 text-white"
                         : isNight
                         ? "bg-[#c5ff55] text-[#14170f]"
@@ -558,50 +549,13 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                     </div>
                   </div>
                 </div>
-
-                {/* Admin Mode Toggle */}
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toggleAdminMode();
-                      if (isDedicatedAdminView) {
-                        navigate("/dashboard");
-                      } else {
-                        navigate("/admin");
-                      }
-                    }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-1.5 px-2 text-[11px] font-bold text-purple-300 transition hover:bg-purple-500/20"
-                  >
-                    <ArrowRightLeft size={13} />
-                    <span>{isDedicatedAdminView ? "Switch to Candidate View" : "Return to Admin Console"}</span>
-                  </button>
-                )}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-1.5">
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toggleAdminMode();
-                      if (isDedicatedAdminView) {
-                        navigate("/dashboard");
-                      } else {
-                        navigate("/admin");
-                      }
-                    }}
-                    title={isDedicatedAdminView ? "Switch to Candidate View" : "Return to Admin Console"}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition"
-                  >
-                    <ArrowRightLeft size={14} />
-                  </button>
-                )}
-
                 <div
                   title={`${user?.name || "Knight"} (${isAdmin ? "ADMIN" : role})`}
                   className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black transition shadow-sm ${
-                    isDedicatedAdminView
+                    isAdmin
                       ? "bg-purple-600 text-white"
                       : isNight
                       ? "bg-[#c5ff55] text-[#14170f]"

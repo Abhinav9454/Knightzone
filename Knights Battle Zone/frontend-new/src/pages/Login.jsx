@@ -37,17 +37,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const data = await login({ email, password });
-      const userRole = data?.user?.role?.toUpperCase?.() || "";
-      const isAdm =
-        userRole === "ADMIN" ||
-        email.toLowerCase().trim() === "admin@knightzone.dev";
-
-      if (isAdm && (!searchParams.get("redirect") || destination === "/dashboard")) {
-        navigate("/admin");
-      } else {
-        navigate(destination);
-      }
+      await login({ email, password });
+      navigate(destination);
     } catch (err) {
       const msg =
         err.response?.data?.message ||
