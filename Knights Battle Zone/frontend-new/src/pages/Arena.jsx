@@ -171,6 +171,8 @@ export default function Arena() {
   const [customRoomDuration, setCustomRoomDuration] = useState(15);
   const [customRoomDifficulty, setCustomRoomDifficulty] = useState("MEDIUM");
   const [customRoomMode, setCustomRoomMode] = useState("CODING");
+  const [customRoomTopic, setCustomRoomTopic] = useState("ALL");
+  const [allowSpectators, setAllowSpectators] = useState(true);
   const [joinRoomCodeInput, setJoinRoomCodeInput] = useState("");
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
@@ -331,10 +333,16 @@ export default function Arena() {
         mode: customRoomMode,
         difficulty: customRoomDifficulty,
         durationSeconds: customRoomDuration * 60,
+        topic: customRoomTopic,
+        allowSpectators: allowSpectators,
       });
 
       if (roomRes && roomRes.inviteCode) {
-        setCreatedRoom(roomRes);
+        setCreatedRoom({
+          ...roomRes,
+          topic: customRoomTopic,
+          allowSpectators: allowSpectators,
+        });
         setShowCreateRoomModal(true);
 
         if (roomPollRef.current) clearInterval(roomPollRef.current);
@@ -356,6 +364,7 @@ export default function Arena() {
                 isPrivateRoom: true,
                 roomCode: roomRes.inviteCode,
                 durationSeconds: check.durationSeconds || customRoomDuration * 60,
+                topic: customRoomTopic,
               });
             }
           } catch (pollErr) {
@@ -372,6 +381,8 @@ export default function Arena() {
         durationSeconds: customRoomDuration * 60,
         difficulty: customRoomDifficulty,
         mode: customRoomMode,
+        topic: customRoomTopic,
+        allowSpectators: allowSpectators,
       });
       setShowCreateRoomModal(true);
     } finally {
@@ -941,6 +952,55 @@ export default function Arena() {
                           ))}
                         </div>
                       </div>
+
+                      {/* Problem Topic */}
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-wider text-[#788071]">
+                          Problem Topic
+                        </label>
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          {[
+                            { id: "ALL", label: "Mixed / All" },
+                            { id: "ARRAYS", label: "Arrays & Hash" },
+                            { id: "STRINGS", label: "Strings" },
+                            { id: "SEARCH", label: "Binary Search" },
+                            { id: "DP", label: "Dynamic Prog" },
+                            { id: "TREES", label: "Trees & Graphs" },
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setCustomRoomTopic(t.id)}
+                              className={`rounded-xl border py-2 px-2 text-[11px] font-black transition ${
+                                customRoomTopic === t.id
+                                  ? "border-purple-400 bg-purple-500/15 text-purple-300 shadow-sm"
+                                  : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Spectator Mode Toggle */}
+                      <div className="rounded-2xl border border-white/10 bg-black/40 p-3.5 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-white block">Allow Live Spectators</span>
+                          <span className="text-[10px] text-[#788071]">Allow peers to watch this duel in spectator mode</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAllowSpectators(!allowSpectators)}
+                          className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                            allowSpectators
+                              ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-300 shadow-sm"
+                              : "border-white/10 bg-white/5 text-[#788071]"
+                          }`}
+                        >
+                          {allowSpectators ? "ON (Public)" : "OFF (Private)"}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-8 flex gap-3">
@@ -1011,7 +1071,7 @@ export default function Arena() {
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-[#d7b45f]"></span>
                       </div>
                       <span>
-                        Listening on Room #{createdRoom.inviteCode} • {customRoomDuration}m {customRoomDifficulty}
+                        Listening on Room #{createdRoom.inviteCode} • {customRoomDuration}m {customRoomDifficulty} • {customRoomTopic} • {allowSpectators ? "Live Spectators Allowed" : "Strictly Private"}
                       </span>
                     </div>
 
