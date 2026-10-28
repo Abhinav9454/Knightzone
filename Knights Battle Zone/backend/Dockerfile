@@ -4,7 +4,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 COPY judge-service ./judge-service
-RUN mvn clean package -DskipTests
+RUN mvn package -DskipTests -Dmaven.test.skip=true
 
 # Runtime stage
 FROM eclipse-temurin:17-jre

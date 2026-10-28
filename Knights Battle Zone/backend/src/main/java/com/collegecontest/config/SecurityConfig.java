@@ -140,7 +140,9 @@ public class SecurityConfig {
                                 "/badges",
                                 "/badges/**",
                                 "/clubs",
-                                "/clubs/**")
+                                "/clubs/**",
+                                "/certificates/verify/**",
+                                "/verify-cert/**")
                         .permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",

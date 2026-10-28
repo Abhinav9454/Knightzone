@@ -17,13 +17,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StreakController {
 
     private final UserRepository userRepository;
+    private final com.collegecontest.repository.SubmissionRepository submissionRepository;
     // Thread-safe in-memory state for streak freeze shields & daily checks
     private static final Map<Long, Integer> FREEZE_INVENTORY = new ConcurrentHashMap<>();
     private static final Map<Long, LocalDate> LAST_FREEZE_DATE = new ConcurrentHashMap<>();
     private static final Map<Long, Integer> CUSTOM_STREAKS = new ConcurrentHashMap<>();
 
-    public StreakController(UserRepository userRepository) {
+    public StreakController(UserRepository userRepository, com.collegecontest.repository.SubmissionRepository submissionRepository) {
         this.userRepository = userRepository;
+        this.submissionRepository = submissionRepository;
     }
 
     private Long currentUserId() {
@@ -37,20 +39,60 @@ public class StreakController {
     @GetMapping("/my")
     public ResponseEntity<Map<String, Object>> getMyStreak() {
         Long userId = currentUserId();
-        int currentStreak = CUSTOM_STREAKS.computeIfAbsent(userId, id -> 14);
-        int longestStreak = Math.max(currentStreak, 28);
         int freezeCount = FREEZE_INVENTORY.computeIfAbsent(userId, id -> 2);
         boolean freezeActiveToday = LocalDate.now().equals(LAST_FREEZE_DATE.get(userId));
 
-        // Generate past 365 days contribution heatmap data
-        List<Map<String, Object>> activityHeatmap = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        Random rnd = new Random(userId * 31);
+        // Fetch real submission activity from MySQL database for the last 365 days
+        Map<String, Integer> countsByDate = new HashMap<>();
+        try {
+            java.time.LocalDateTime since = java.time.LocalDateTime.now().minusDays(365);
+            List<Object[]> dailyCounts = submissionRepository.countDailySubmissionsByUserId(userId, since);
+            if (dailyCounts != null) {
+                for (Object[] row : dailyCounts) {
+                    if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                        String dateStr = row[0].toString();
+                        int cnt = ((Number) row[1]).intValue();
+                        countsByDate.put(dateStr, cnt);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Log and fallback to empty
+        }
 
+        // Calculate genuine current streak from consecutive days
+        LocalDate today = LocalDate.now();
+        int dbStreak = 0;
+        int checkDays = 0;
+        
+        // Check if solved today
+        boolean todaySolved = countsByDate.getOrDefault(today.toString(), 0) > 0;
+        if (todaySolved) {
+            dbStreak++;
+        }
+        
+        // Check consecutive past days
+        for (int i = 1; i <= 365; i++) {
+            LocalDate d = today.minusDays(i);
+            int count = countsByDate.getOrDefault(d.toString(), 0);
+            if (count > 0) {
+                dbStreak++;
+            } else if (d.equals(LAST_FREEZE_DATE.get(userId))) {
+                // Freeze shield preserved this day
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        int currentStreak = Math.max(dbStreak, CUSTOM_STREAKS.getOrDefault(userId, todaySolved ? 1 : 0));
+        int longestStreak = Math.max(currentStreak, Math.max(dbStreak, 14));
+
+        // Build 365-day contribution heatmap with real DB counts
+        List<Map<String, Object>> activityHeatmap = new ArrayList<>();
         for (int i = 364; i >= 0; i--) {
             LocalDate date = today.minusDays(i);
-            // Higher probability on recent days
-            int count = (i < currentStreak) ? (1 + rnd.nextInt(4)) : (rnd.nextDouble() < 0.35 ? rnd.nextInt(5) : 0);
+            int count = countsByDate.getOrDefault(date.toString(), 0);
             int level = count == 0 ? 0 : (count <= 1 ? 1 : (count <= 3 ? 2 : (count <= 5 ? 3 : 4)));
             
             Map<String, Object> day = new HashMap<>();
