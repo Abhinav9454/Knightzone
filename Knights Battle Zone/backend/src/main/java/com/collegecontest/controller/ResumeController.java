@@ -114,6 +114,21 @@ public class ResumeController {
         return strengthPayloadForUser(user.getId(), uploadMeta, parsedResume);
     }
 
+    @PostMapping(value = "/parse", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> parseResumeText(@org.springframework.web.bind.annotation.RequestBody Map<String, String> body) {
+        String text = body == null ? "" : body.getOrDefault("text", "");
+        if (text == null || text.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resume text is required");
+        }
+        ParsedResumeData parsedResume = new ParsedResumeData(text, "Pasted_Resume_Text.txt", text.getBytes(StandardCharsets.UTF_8).length, false, "Client text parsed directly.");
+        Long userId = currentUserIdOrNull();
+        if (userId != null) {
+            return strengthPayloadForUser(userId, Map.of("mode", "DIRECT_TEXT"), parsedResume);
+        }
+        ResumeStrengthDTO fallbackStrength = new ResumeStrengthDTO(85, List.of("Maintain measurable impact metrics across projects.", "Keep technical stack aligned with target roles."));
+        return buildStrengthPayload(fallbackStrength, Map.of("mode", "GUEST_EVALUATION"), parsedResume);
+    }
+
     private Map<String, Object> strengthPayloadForUser(
             Long userId,
             Map<String, Object> uploadMeta,
@@ -438,6 +453,21 @@ public class ResumeController {
         }
         payload.putAll(uploadMeta);
         return payload;
+    }
+
+    private Long currentUserIdOrNull() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || authentication instanceof AnonymousAuthenticationToken
+                    || "anonymousUser".equalsIgnoreCase(authentication.getName())) {
+                return null;
+            }
+            return userRepository.findByEmail(authentication.getName()).map(User::getId).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private User currentUser() {

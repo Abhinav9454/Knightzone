@@ -125,7 +125,8 @@ public class SecurityConfig {
                                 "/error",
                                 "/ws/**",
                                 "/chat",
-                                "/chat/**")
+                                "/chat/**",
+                                "/resume/parse")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/problems/**",
