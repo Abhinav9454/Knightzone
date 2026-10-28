@@ -43,6 +43,8 @@ import {
   Hash,
   Award,
   Zap,
+  Globe,
+  Sliders,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -301,7 +303,7 @@ export default function MockInterviews() {
   });
   const [peerScoredSuccess, setPeerScoredSuccess] = useState(false);
 
-  // AI Interview Session State
+  // AI Interview Session State & Voice Persona Studio
   const [sessionActive, setSessionActive] = useState(false);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
@@ -309,6 +311,10 @@ export default function MockInterviews() {
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
   const [autoSpeakQuestion, setAutoSpeakQuestion] = useState(true);
   const [voiceSpeechSpeed, setVoiceSpeechSpeed] = useState(1.0);
+  const [selectedAccent, setSelectedAccent] = useState("auto"); // "auto", "en-IN", "en-US", "en-GB"
+  const [voicePitch, setVoicePitch] = useState(1.0); // 0.85, 1.0, 1.15
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
   const [transcriptInterim, setTranscriptInterim] = useState("");
   const recognitionRef = useRef(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -365,6 +371,26 @@ export default function MockInterviews() {
         try {
           recognitionRef.current.stop();
         } catch (_) {}
+      }
+    };
+  }, []);
+
+  // Dynamically load system voices for multi-voice accent synthesizer
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const populateVoices = () => {
+      try {
+        const voices = window.speechSynthesis.getVoices() || [];
+        setAvailableVoices(voices);
+      } catch (e) {
+        console.warn("Could not get voices:", e);
+      }
+    };
+    populateVoices();
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.onvoiceschanged = null;
       }
     };
   }, []);
@@ -734,7 +760,7 @@ export default function MockInterviews() {
     }, 1500);
   };
 
-  // Voice AI Synthesis (TTS) Handlers
+  // Voice AI Synthesis (TTS) Handlers & Multi-Accent Speech Engine
   const speakQuestion = (textToSpeak) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       return;
@@ -744,23 +770,45 @@ export default function MockInterviews() {
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = voiceSpeechSpeed;
-    utterance.pitch = 1.0;
+    utterance.pitch = voicePitch;
 
-    const voices = window.speechSynthesis.getVoices();
-    const naturalVoice =
-      voices.find(
-        (v) =>
-          v.lang.startsWith("en") &&
-          (v.name.includes("Google") ||
-            v.name.includes("Natural") ||
-            v.name.includes("Samantha") ||
-            v.name.includes("Daniel"))
-      ) || voices.find((v) => v.lang.startsWith("en"));
-    if (naturalVoice) utterance.voice = naturalVoice;
+    const voices = window.speechSynthesis.getVoices() || availableVoices;
+    let chosenVoice = null;
+
+    if (selectedAccent !== "auto") {
+      chosenVoice = voices.find((v) =>
+        v.lang.toLowerCase().replace("_", "-").startsWith(selectedAccent.toLowerCase())
+      );
+    }
+
+    if (!chosenVoice) {
+      chosenVoice =
+        voices.find(
+          (v) =>
+            v.lang.startsWith("en") &&
+            (v.name.includes("Google") ||
+              v.name.includes("Natural") ||
+              v.name.includes("Samantha") ||
+              v.name.includes("Daniel") ||
+              v.name.includes("Rishi") ||
+              v.name.includes("Veena") ||
+              v.name.includes("Heera"))
+        ) || voices.find((v) => v.lang.startsWith("en"));
+    }
+
+    if (chosenVoice) {
+      utterance.voice = chosenVoice;
+    }
 
     utterance.onstart = () => setIsSpeakingQuestion(true);
-    utterance.onend = () => setIsSpeakingQuestion(false);
-    utterance.onerror = () => setIsSpeakingQuestion(false);
+    utterance.onend = () => {
+      setIsSpeakingQuestion(false);
+      setIsTestingVoice(false);
+    };
+    utterance.onerror = () => {
+      setIsSpeakingQuestion(false);
+      setIsTestingVoice(false);
+    };
 
     window.speechSynthesis.speak(utterance);
   };
@@ -770,6 +818,7 @@ export default function MockInterviews() {
       window.speechSynthesis.cancel();
     }
     setIsSpeakingQuestion(false);
+    setIsTestingVoice(false);
   };
 
   const toggleSpeakQuestion = (text) => {
@@ -780,7 +829,25 @@ export default function MockInterviews() {
     }
   };
 
-  // Voice AI Speech-to-Text (STT) Dictation Handlers
+  const handleTestVoicePersona = () => {
+    if (isSpeakingQuestion) {
+      stopSpeaking();
+      return;
+    }
+    setIsTestingVoice(true);
+    const accentLabel =
+      selectedAccent === "en-IN"
+        ? "Indian English"
+        : selectedAccent === "en-GB"
+        ? "British English"
+        : selectedAccent === "en-US"
+        ? "American English"
+        : "Natural AI";
+    const sampleText = `Greetings! I am your Knights Battle Zone AI technical interviewer speaking in ${accentLabel} at ${voiceSpeechSpeed}x speed. I am calibrated and ready for your session.`;
+    speakQuestion(sampleText);
+  };
+
+  // Voice AI Speech-to-Text (STT) Dictation Handlers with Accent Matching
   const toggleSpeechRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -790,7 +857,9 @@ export default function MockInterviews() {
 
     if (isRecording) {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
       }
       setIsRecording(false);
       setTranscriptInterim("");
@@ -805,7 +874,15 @@ export default function MockInterviews() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-US";
+      
+      // Match candidate voice dictation accent to selected interviewer accent
+      if (selectedAccent === "en-IN") {
+        recognition.lang = "en-IN";
+      } else if (selectedAccent === "en-GB") {
+        recognition.lang = "en-GB";
+      } else {
+        recognition.lang = "en-US";
+      }
 
       recognition.onstart = () => {
         setIsRecording(true);
@@ -1138,6 +1215,113 @@ export default function MockInterviews() {
                         ))}
                       </div>
                     </div>
+
+                    {/* AI Voice Persona & Speech Engine Studio */}
+                    <div className="pt-4 border-t border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe size={15} className="text-[#c5ff55]" />
+                          <label className="text-xs font-bold uppercase tracking-wider text-white">
+                            Interviewer Voice Persona & Speech Settings
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleTestVoicePersona}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#c5ff55]/30 bg-[#c5ff55]/10 px-3 py-1.5 text-xs font-bold text-[#c5ff55] hover:bg-[#c5ff55]/20 transition"
+                        >
+                          {isTestingVoice ? <Pause size={13} /> : <Volume2 size={13} />}
+                          {isTestingVoice ? "Stop Audition" : "🔊 Audition Persona"}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Accent Selector */}
+                        <div>
+                          <span className="text-[11px] font-bold text-[#788874] block mb-2">
+                            Voice Accent & Pronunciation
+                          </span>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { id: "auto", label: "🌐 Natural AI", desc: "Auto Default" },
+                              { id: "en-IN", label: "🇮🇳 Indian Accent", desc: "en-IN Dialect" },
+                              { id: "en-US", label: "🇺🇸 US English", desc: "en-US Silicon Valley" },
+                              { id: "en-GB", label: "🇬🇧 British English", desc: "en-GB Academic" },
+                            ].map((accent) => (
+                              <button
+                                key={accent.id}
+                                type="button"
+                                onClick={() => setSelectedAccent(accent.id)}
+                                className={`text-left p-2.5 rounded-xl border transition ${
+                                  selectedAccent === accent.id
+                                    ? "bg-[#c5ff55]/15 border-[#c5ff55] text-white shadow-sm shadow-[#c5ff55]/10"
+                                    : "bg-white/5 border-white/10 text-[#8f9d8a] hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                <div className="text-xs font-bold">{accent.label}</div>
+                                <div className="text-[10px] text-[#788874]">{accent.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Speed & Pitch Controls */}
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-[11px] font-bold text-[#788874] block mb-2">
+                              Speaking Speed ({voiceSpeechSpeed}x)
+                            </span>
+                            <div className="flex gap-1.5">
+                              {[
+                                { rate: 0.75, label: "0.75x Slow" },
+                                { rate: 1.0, label: "1.0x Normal" },
+                                { rate: 1.25, label: "1.25x Dynamic" },
+                                { rate: 1.5, label: "1.5x Rapid" },
+                              ].map((s) => (
+                                <button
+                                  key={s.rate}
+                                  type="button"
+                                  onClick={() => setVoiceSpeechSpeed(s.rate)}
+                                  className={`flex-1 rounded-xl py-2 text-center text-xs font-bold border transition ${
+                                    voiceSpeechSpeed === s.rate
+                                      ? "bg-[#c5ff55] text-[#14170f] border-[#c5ff55]"
+                                      : "bg-white/5 border-white/10 text-[#8f9d8a] hover:text-white"
+                                  }`}
+                                >
+                                  {s.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[11px] font-bold text-[#788874] block mb-2">
+                              Vocal Pitch Profile
+                            </span>
+                            <div className="flex gap-1.5">
+                              {[
+                                { pitch: 0.85, label: "Deep (0.85x)" },
+                                { pitch: 1.0, label: "Balanced (1.0x)" },
+                                { pitch: 1.15, label: "Crisp (1.15x)" },
+                              ].map((p) => (
+                                <button
+                                  key={p.pitch}
+                                  type="button"
+                                  onClick={() => setVoicePitch(p.pitch)}
+                                  className={`flex-1 rounded-xl py-1.5 text-center text-xs font-bold border transition ${
+                                    voicePitch === p.pitch
+                                      ? "bg-white/20 border-white/30 text-white"
+                                      : "bg-white/5 border-white/10 text-[#8f9d8a] hover:text-white"
+                                  }`}
+                                >
+                                  {p.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Launch Button */}
@@ -1248,16 +1432,18 @@ export default function MockInterviews() {
                       )}
                     </div>
 
-                    {/* Voice Controls: Listen, Equalizer & Auto-Speak */}
-                    <div className="flex items-center gap-2">
+                    {/* Voice Controls: Multi-Voice Accent Selector, Speed Pills & Equalizer */}
+                    <div className="flex flex-wrap items-center gap-2">
                       {/* Equalizer Waveform Bars */}
-                      <div className="flex items-center gap-1 h-4 px-2" title="Speech Synthesis Activity Indicator">
+                      <div className="flex items-center gap-1 h-5 px-2 bg-white/5 rounded-xl border border-white/10" title="Audio Waveform Activity">
                         <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-4 animate-pulse" : "h-1.5 opacity-30"}`} />
                         <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-6 animate-pulse delay-75" : "h-2.5 opacity-30"}`} />
                         <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-5 animate-pulse delay-150" : "h-1.5 opacity-30"}`} />
                         <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-3 animate-pulse delay-100" : "h-2 opacity-30"}`} />
+                        <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-5 animate-pulse delay-200" : "h-1 opacity-30"}`} />
                       </div>
 
+                      {/* Listen / Pause button */}
                       <button
                         type="button"
                         onClick={() => toggleSpeakQuestion(currentAiQuestion.question)}
@@ -1268,9 +1454,65 @@ export default function MockInterviews() {
                         }`}
                       >
                         {isSpeakingQuestion ? <Pause size={13} /> : <Volume2 size={13} />}
-                        {isSpeakingQuestion ? "Pause Voice" : "🔊 Listen to Question"}
+                        {isSpeakingQuestion ? "Pause Voice" : "🔊 Listen"}
                       </button>
 
+                      {/* Accent Selector Pills */}
+                      <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-0.5">
+                        {[
+                          { id: "auto", label: "Auto" },
+                          { id: "en-IN", label: "🇮🇳 IN" },
+                          { id: "en-US", label: "🇺🇸 US" },
+                          { id: "en-GB", label: "🇬🇧 UK" },
+                        ].map((acc) => (
+                          <button
+                            key={acc.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAccent(acc.id);
+                              if (isSpeakingQuestion) {
+                                stopSpeaking();
+                                setTimeout(() => speakQuestion(currentAiQuestion.question), 100);
+                              }
+                            }}
+                            className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
+                              selectedAccent === acc.id
+                                ? "bg-[#c5ff55] text-[#14170f]"
+                                : "text-[#8f9d8a] hover:text-white"
+                            }`}
+                            title={`Interviewer Accent: ${acc.label}`}
+                          >
+                            {acc.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Speech Rate Pills */}
+                      <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-0.5">
+                        {[0.75, 1.0, 1.25, 1.5].map((speed) => (
+                          <button
+                            key={speed}
+                            type="button"
+                            onClick={() => {
+                              setVoiceSpeechSpeed(speed);
+                              if (isSpeakingQuestion) {
+                                stopSpeaking();
+                                setTimeout(() => speakQuestion(currentAiQuestion.question), 100);
+                              }
+                            }}
+                            className={`rounded-lg px-1.5 py-1 text-[10px] font-bold transition ${
+                              voiceSpeechSpeed === speed
+                                ? "bg-[#c5ff55] text-[#14170f]"
+                                : "text-[#8f9d8a] hover:text-white"
+                            }`}
+                            title={`Speaking rate ${speed}x`}
+                          >
+                            {speed}x
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Auto-Voice Toggle */}
                       <button
                         type="button"
                         onClick={() => setAutoSpeakQuestion(!autoSpeakQuestion)}
@@ -1281,7 +1523,7 @@ export default function MockInterviews() {
                             : "border-white/10 bg-white/5 text-[#788874]"
                         }`}
                       >
-                        Auto-Voice: {autoSpeakQuestion ? "ON" : "OFF"}
+                        Auto: {autoSpeakQuestion ? "ON" : "OFF"}
                       </button>
                     </div>
                   </div>
@@ -1306,9 +1548,9 @@ export default function MockInterviews() {
                         Your Answer (Speak or Type Explanation)
                       </label>
                       {isRecording && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-rose-400 animate-pulse">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-rose-400 animate-pulse">
                           <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-                          Live Transcribing
+                          Live Transcribing ({selectedAccent === "en-IN" ? "🇮🇳 en-IN" : selectedAccent === "en-GB" ? "🇬🇧 en-GB" : "🇺🇸 en-US"})
                         </span>
                       )}
                     </div>
