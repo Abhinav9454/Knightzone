@@ -37,6 +37,9 @@ import {
   RefreshCw,
   X,
   Volume2,
+  VolumeX,
+  Pause,
+  Wand2,
   Hash,
   Award,
   Zap,
@@ -303,6 +306,11 @@ export default function MockInterviews() {
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
+  const [autoSpeakQuestion, setAutoSpeakQuestion] = useState(true);
+  const [voiceSpeechSpeed, setVoiceSpeechSpeed] = useState(1.0);
+  const [transcriptInterim, setTranscriptInterim] = useState("");
+  const recognitionRef = useRef(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [evaluating, setEvaluating] = useState(false);
   const [feedbackResult, setFeedbackResult] = useState(null);
@@ -346,6 +354,20 @@ export default function MockInterviews() {
       }
     };
   }, [inRoom, videoActive]);
+
+  // Voice AI Synthesis & Recognition Cleanup
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   // Fetch Live Profile to ensure user's actual Knight Token is displayed
   useEffect(() => {
@@ -712,6 +734,123 @@ export default function MockInterviews() {
     }, 1500);
   };
 
+  // Voice AI Synthesis (TTS) Handlers
+  const speakQuestion = (textToSpeak) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+    window.speechSynthesis.cancel();
+    if (!textToSpeak) return;
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.rate = voiceSpeechSpeed;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice =
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Google") ||
+            v.name.includes("Natural") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Daniel"))
+      ) || voices.find((v) => v.lang.startsWith("en"));
+    if (naturalVoice) utterance.voice = naturalVoice;
+
+    utterance.onstart = () => setIsSpeakingQuestion(true);
+    utterance.onend = () => setIsSpeakingQuestion(false);
+    utterance.onerror = () => setIsSpeakingQuestion(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeakingQuestion(false);
+  };
+
+  const toggleSpeakQuestion = (text) => {
+    if (isSpeakingQuestion) {
+      stopSpeaking();
+    } else {
+      speakQuestion(text);
+    }
+  };
+
+  // Voice AI Speech-to-Text (STT) Dictation Handlers
+  const toggleSpeechRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.");
+      return;
+    }
+
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+      setTranscriptInterim("");
+      return;
+    }
+
+    try {
+      if (isSpeakingQuestion) {
+        stopSpeaking();
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+        setTranscriptInterim("");
+      };
+
+      recognition.onresult = (event) => {
+        let interim = "";
+        let final = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const trans = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            final += trans + " ";
+          } else {
+            interim += trans;
+          }
+        }
+
+        if (final) {
+          setUserAnswer((prev) => (prev ? prev + " " + final.trim() : final.trim()));
+        }
+        setTranscriptInterim(interim);
+      };
+
+      recognition.onerror = (event) => {
+        console.warn("Speech recognition error:", event.error);
+        if (event.error !== "no-speech") {
+          setIsRecording(false);
+          setTranscriptInterim("");
+        }
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+        setTranscriptInterim("");
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.warn("Speech recognition failed:", err);
+      setIsRecording(false);
+    }
+  };
+
   // AI Interview Handlers
   const handleStartAiInterview = () => {
     setSessionActive(true);
@@ -719,12 +858,25 @@ export default function MockInterviews() {
     setUserAnswer("");
     setElapsedSeconds(0);
     setFeedbackResult(null);
+    setTranscriptInterim("");
+    stopSpeaking();
+    if (autoSpeakQuestion) {
+      const firstQ = CURATED_QUESTIONS[0];
+      setTimeout(() => speakQuestion(firstQ.question), 500);
+    }
   };
 
   const currentAiQuestion = CURATED_QUESTIONS[currentQuestionIdx % CURATED_QUESTIONS.length];
 
   const handleSubmitAnswer = async () => {
     if (!userAnswer.trim()) return;
+
+    stopSpeaking();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+    setTranscriptInterim("");
 
     setEvaluating(true);
     try {
@@ -771,10 +923,22 @@ export default function MockInterviews() {
   };
 
   const handleNextQuestion = () => {
+    stopSpeaking();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+    setTranscriptInterim("");
+
     if (currentQuestionIdx < CURATED_QUESTIONS.length - 1) {
-      setCurrentQuestionIdx((prev) => prev + 1);
+      const nextIdx = currentQuestionIdx + 1;
+      setCurrentQuestionIdx(nextIdx);
       setUserAnswer("");
       setFeedbackResult(null);
+      if (autoSpeakQuestion) {
+        const nextQ = CURATED_QUESTIONS[nextIdx % CURATED_QUESTIONS.length];
+        setTimeout(() => speakQuestion(nextQ.question), 400);
+      }
     } else {
       setSessionActive(false);
     }
@@ -1069,11 +1233,59 @@ export default function MockInterviews() {
                   </div>
                 </div>
 
-                {/* Question Prompt Body */}
+                {/* Question Prompt Body with Voice-Powered AI Interviewer HUD */}
                 <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-5">
-                  <span className="inline-block rounded-md bg-[#c5ff55]/10 border border-[#c5ff55]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#c5ff55] mb-2 uppercase">
-                    {currentAiQuestion.category} • {currentAiQuestion.difficulty}
-                  </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block rounded-md bg-[#c5ff55]/10 border border-[#c5ff55]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#c5ff55] uppercase">
+                        {currentAiQuestion.category} • {currentAiQuestion.difficulty}
+                      </span>
+                      {isSpeakingQuestion && (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#c5ff55] animate-pulse">
+                          <Volume2 size={13} />
+                          AI Interviewer Speaking...
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Voice Controls: Listen, Equalizer & Auto-Speak */}
+                    <div className="flex items-center gap-2">
+                      {/* Equalizer Waveform Bars */}
+                      <div className="flex items-center gap-1 h-4 px-2" title="Speech Synthesis Activity Indicator">
+                        <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-4 animate-pulse" : "h-1.5 opacity-30"}`} />
+                        <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-6 animate-pulse delay-75" : "h-2.5 opacity-30"}`} />
+                        <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-5 animate-pulse delay-150" : "h-1.5 opacity-30"}`} />
+                        <span className={`w-1 rounded-full bg-[#c5ff55] transition-all duration-150 ${isSpeakingQuestion ? "h-3 animate-pulse delay-100" : "h-2 opacity-30"}`} />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleSpeakQuestion(currentAiQuestion.question)}
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-sm ${
+                          isSpeakingQuestion
+                            ? "border border-amber-400/40 bg-amber-400/20 text-amber-300"
+                            : "border border-[#c5ff55]/30 bg-[#c5ff55]/10 text-[#c5ff55] hover:bg-[#c5ff55]/20"
+                        }`}
+                      >
+                        {isSpeakingQuestion ? <Pause size={13} /> : <Volume2 size={13} />}
+                        {isSpeakingQuestion ? "Pause Voice" : "🔊 Listen to Question"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setAutoSpeakQuestion(!autoSpeakQuestion)}
+                        title="Automatically read aloud each new question"
+                        className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-bold transition ${
+                          autoSpeakQuestion
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                            : "border-white/10 bg-white/5 text-[#788874]"
+                        }`}
+                      >
+                        Auto-Voice: {autoSpeakQuestion ? "ON" : "OFF"}
+                      </button>
+                    </div>
+                  </div>
+
                   <p className="text-sm font-medium text-white leading-relaxed">{currentAiQuestion.question}</p>
 
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#8f9d8a]">
@@ -1086,25 +1298,42 @@ export default function MockInterviews() {
                   </div>
                 </div>
 
-                {/* Candidate Answer Box */}
+                {/* Candidate Answer Box with Real-time Voice Dictation */}
                 <div className="mt-6 space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#788874]">
-                      Your Answer (Speak or Type Code/Explanation)
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-[#788874]">
+                        Your Answer (Speak or Type Explanation)
+                      </label>
+                      {isRecording && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-rose-400 animate-pulse">
+                          <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                          Live Transcribing
+                        </span>
+                      )}
+                    </div>
 
                     <button
-                      onClick={() => setIsRecording(!isRecording)}
-                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                      type="button"
+                      onClick={toggleSpeechRecognition}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-bold transition shadow-sm ${
                         isRecording
-                          ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse"
-                          : "bg-white/5 text-[#aab1a1] hover:text-white"
+                          ? "bg-rose-500/25 text-rose-300 border border-rose-500/50 animate-pulse shadow-rose-500/20"
+                          : "border border-white/15 bg-white/5 text-[#c5ff55] hover:bg-white/10 hover:border-white/25"
                       }`}
                     >
-                      {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
-                      {isRecording ? "Listening to mic..." : "Enable Voice Input"}
+                      {isRecording ? <Mic size={14} className="text-rose-400 animate-bounce" /> : <Mic size={14} />}
+                      {isRecording ? "🔴 Stop Dictation (Mic Active)" : "🎙️ Dictate Answer (Voice-to-Text)"}
                     </button>
                   </div>
+
+                  {/* Live Speech Interim Preview */}
+                  {isRecording && transcriptInterim && (
+                    <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-300 font-mono animate-in fade-in duration-150">
+                      <span className="font-bold text-white mr-1.5">🎙️ Live speech stream:</span>
+                      <span className="italic">"{transcriptInterim}..."</span>
+                    </div>
+                  )}
 
                   <textarea
                     rows={8}
@@ -2091,16 +2320,26 @@ export default function MockInterviews() {
                   <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
                     <span className="text-[11px] font-bold text-[#788874]">{item.difficulty}</span>
 
-                    <button
-                      onClick={() => {
-                        setActiveTab("ai");
-                        setSessionActive(true);
-                        setCurrentQuestionIdx(CURATED_QUESTIONS.findIndex((q) => q.id === item.id));
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#c5ff55] hover:underline"
-                    >
-                      Practice in AI Studio <ArrowRight size={13} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleSpeakQuestion(item.question)}
+                        className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-[#c5ff55]/10 hover:border-[#c5ff55]/30 text-[#8f9d8a] hover:text-[#c5ff55] transition"
+                        title="Listen to question aloud"
+                      >
+                        <Volume2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab("ai");
+                          setSessionActive(true);
+                          setCurrentQuestionIdx(CURATED_QUESTIONS.findIndex((q) => q.id === item.id));
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#c5ff55] hover:underline"
+                      >
+                        Practice in AI Studio <ArrowRight size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
