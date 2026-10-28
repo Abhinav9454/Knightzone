@@ -27,6 +27,12 @@ import {
   RefreshCw,
   Pause,
   X,
+  Copy,
+  Check,
+  Link2,
+  Key,
+  Share2,
+  ShieldCheck,
 } from "lucide-react";
 import { duelsApi, submissionsApi, problemsApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -157,6 +163,21 @@ export default function Arena() {
   const duelTimerRef = useRef(null);
   const duelPollRef = useRef(null);
   const oppSimRef = useRef(null);
+  const roomPollRef = useRef(null);
+
+  // Private Custom Duel Rooms State (Feature 1)
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
+  const [customRoomDuration, setCustomRoomDuration] = useState(15);
+  const [customRoomDifficulty, setCustomRoomDifficulty] = useState("MEDIUM");
+  const [customRoomMode, setCustomRoomMode] = useState("CODING");
+  const [joinRoomCodeInput, setJoinRoomCodeInput] = useState("");
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [roomError, setRoomError] = useState("");
+  const [createdRoom, setCreatedRoom] = useState(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const handleOpenReplay = async (duel) => {
     setSelectedDuelForReplay(duel);
@@ -194,13 +215,21 @@ export default function Arena() {
   useEffect(() => {
     loadPastDuels();
     loadLeaderboard();
+
+    // Check if URL has ?room=XXXXXX to auto-open join room dialog
+    const roomParam = searchParams.get("room");
+    if (roomParam) {
+      setJoinRoomCodeInput(roomParam.trim().toUpperCase());
+      setShowJoinRoomModal(true);
+    }
+
     return () => {
       clearAllTimers();
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, searchParams]);
 
   // Anti-Cheat Proctoring Listener during live battle
   useEffect(() => {
@@ -286,6 +315,133 @@ export default function Arena() {
     if (duelTimerRef.current) clearInterval(duelTimerRef.current);
     if (duelPollRef.current) clearInterval(duelPollRef.current);
     if (oppSimRef.current) clearInterval(oppSimRef.current);
+    if (roomPollRef.current) clearInterval(roomPollRef.current);
+  };
+
+  // Private Custom Duel Room Handlers
+  const handleCreatePrivateRoom = async () => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: "/arena" } });
+      return;
+    }
+    setIsCreatingRoom(true);
+    setRoomError("");
+    try {
+      const roomRes = await duelsApi.createCustomRoom({
+        mode: customRoomMode,
+        difficulty: customRoomDifficulty,
+        durationSeconds: customRoomDuration * 60,
+      });
+
+      if (roomRes && roomRes.inviteCode) {
+        setCreatedRoom(roomRes);
+        setShowCreateRoomModal(true);
+
+        if (roomPollRef.current) clearInterval(roomPollRef.current);
+        roomPollRef.current = setInterval(async () => {
+          try {
+            const check = await duelsApi.getById(roomRes.id);
+            if (check && check.status === "ACTIVE") {
+              clearInterval(roomPollRef.current);
+              setShowCreateRoomModal(false);
+              setCreatedRoom(null);
+              handleOpponentMatched({
+                name: check.opponentName || "Challenger Knight",
+                rating: check.player2RatingBefore || 1500,
+                avatar: (check.opponentName || "CK").slice(0, 2).toUpperCase(),
+                college: `Private Room #${roomRes.inviteCode}`,
+                isBot: false,
+                problemId: check.problemId,
+                duelId: check.id,
+                isPrivateRoom: true,
+                roomCode: roomRes.inviteCode,
+                durationSeconds: check.durationSeconds || customRoomDuration * 60,
+              });
+            }
+          } catch (pollErr) {
+            console.warn("Custom room poll check:", pollErr);
+          }
+        }, 2000);
+      }
+    } catch (err) {
+      console.warn("Failed to create room on server, creating instant room:", err);
+      const fallbackCode = Math.floor(100000 + Math.random() * 900000).toString();
+      setCreatedRoom({
+        id: Date.now(),
+        inviteCode: fallbackCode,
+        durationSeconds: customRoomDuration * 60,
+        difficulty: customRoomDifficulty,
+        mode: customRoomMode,
+      });
+      setShowCreateRoomModal(true);
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
+
+  const handleJoinPrivateRoom = async (codeToJoin) => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: "/arena" } });
+      return;
+    }
+    const cleanCode = (codeToJoin || joinRoomCodeInput).trim().toUpperCase();
+    if (!cleanCode || cleanCode.length < 4) {
+      setRoomError("Please enter a valid 6-digit room code.");
+      return;
+    }
+    setIsJoiningRoom(true);
+    setRoomError("");
+    try {
+      const joinRes = await duelsApi.joinCustomRoom(cleanCode);
+      if (joinRes && joinRes.id) {
+        setShowJoinRoomModal(false);
+        setJoinRoomCodeInput("");
+        handleOpponentMatched({
+          name: joinRes.challengerName || "Room Host",
+          rating: joinRes.player1RatingBefore || 1500,
+          avatar: (joinRes.challengerName || "RH").slice(0, 2).toUpperCase(),
+          college: `Private Room #${cleanCode}`,
+          isBot: false,
+          problemId: joinRes.problemId,
+          duelId: joinRes.id,
+          isPrivateRoom: true,
+          roomCode: cleanCode,
+          durationSeconds: joinRes.durationSeconds || 15 * 60,
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to join room:", err);
+      const msg = err?.response?.data || err?.message || "Room not found or already full.";
+      setRoomError(typeof msg === "string" ? msg : "Room not found or already full.");
+    } finally {
+      setIsJoiningRoom(false);
+    }
+  };
+
+  const handleCopyCode = (code) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    });
+  };
+
+  const handleCopyLink = (code) => {
+    if (!code) return;
+    const url = `${window.location.origin}/arena?room=${code}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
+  };
+
+  const handleCloseCreateModal = () => {
+    if (roomPollRef.current) clearInterval(roomPollRef.current);
+    if (createdRoom?.id) {
+      duelsApi.abandon(createdRoom.id).catch(() => {});
+    }
+    setShowCreateRoomModal(false);
+    setCreatedRoom(null);
   };
 
   const loadPastDuels = async () => {
@@ -418,8 +574,12 @@ export default function Arena() {
   const handleOpponentMatched = async (matchedOpponent) => {
     if (queueIntervalRef.current) clearInterval(queueIntervalRef.current);
     if (queuePollRef.current) clearInterval(queuePollRef.current);
+    if (roomPollRef.current) clearInterval(roomPollRef.current);
 
     setOpponent(matchedOpponent);
+    if (matchedOpponent.duelId) {
+      setActiveDuelId(matchedOpponent.duelId);
+    }
 
     // Load problem from backend if problemId exists
     let chosenProblem = null;
@@ -450,7 +610,7 @@ export default function Arena() {
 
     if (!chosenProblem) {
       chosenProblem =
-        SAMPLE_DUEL_PROBLEMS.find((p) => p.difficulty === selectedFormat.difficulty) ||
+        SAMPLE_DUEL_PROBLEMS.find((p) => p.difficulty === (matchedOpponent.difficulty || selectedFormat.difficulty)) ||
         SAMPLE_DUEL_PROBLEMS[0];
     }
 
@@ -469,7 +629,8 @@ export default function Arena() {
       console.warn("Fullscreen request error:", e);
     }
     setStrikes(0);
-    startDuelBattle(selectedFormat.duration * 60, opponent?.isBot);
+    const battleDuration = opponent?.durationSeconds || selectedFormat.duration * 60;
+    startDuelBattle(battleDuration, opponent?.isBot);
   };
 
   const handleCancelQueue = async () => {
@@ -698,6 +859,269 @@ export default function Arena() {
           )}
         </AnimatePresence>
 
+        {/* ===================== CREATE PRIVATE ROOM MODAL ===================== */}
+        <AnimatePresence>
+          {showCreateRoomModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 15 }}
+                className="relative w-full max-w-lg rounded-3xl border border-[#d7b45f]/30 bg-[#161a14] p-6 sm:p-8 text-center shadow-2xl"
+              >
+                <button
+                  onClick={handleCloseCreateModal}
+                  className="absolute right-5 top-5 rounded-full p-2 text-[#788071] hover:bg-white/10 hover:text-white transition"
+                >
+                  <X size={18} />
+                </button>
+
+                {!createdRoom ? (
+                  /* Room Configuration Step */
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#d7b45f]/15 border border-[#d7b45f]/30 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#d7b45f] mb-4">
+                      <Swords size={14} />
+                      Host Private Duel
+                    </div>
+                    <h3 className="text-2xl font-black text-white">
+                      Create Private Duel Room
+                    </h3>
+                    <p className="mt-1 text-xs text-[#aab1a1]">
+                      Configure round specs and generate an instant 6-digit code or link for your friend.
+                    </p>
+
+                    <div className="mt-6 space-y-4 text-left">
+                      {/* Round Duration */}
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-wider text-[#788071]">
+                          Round Duration
+                        </label>
+                        <div className="mt-2 grid grid-cols-4 gap-2">
+                          {[5, 10, 15, 25].map((mins) => (
+                            <button
+                              key={mins}
+                              type="button"
+                              onClick={() => setCustomRoomDuration(mins)}
+                              className={`rounded-xl border py-2.5 text-xs font-black transition ${
+                                customRoomDuration === mins
+                                  ? "border-[#d7b45f] bg-[#d7b45f]/15 text-[#d7b45f] shadow-sm"
+                                  : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {mins} Mins
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Difficulty Level */}
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-wider text-[#788071]">
+                          Challenge Difficulty
+                        </label>
+                        <div className="mt-2 grid grid-cols-4 gap-2">
+                          {["EASY", "MEDIUM", "HARD", "ANY"].map((diff) => (
+                            <button
+                              key={diff}
+                              type="button"
+                              onClick={() => setCustomRoomDifficulty(diff)}
+                              className={`rounded-xl border py-2.5 text-xs font-black transition ${
+                                customRoomDifficulty === diff
+                                  ? "border-[#c5ff55] bg-[#c5ff55]/15 text-[#c5ff55] shadow-sm"
+                                  : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {diff}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 flex gap-3">
+                      <button
+                        onClick={handleCloseCreateModal}
+                        className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-[#aab1a1] hover:bg-white/10 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCreatePrivateRoom}
+                        disabled={isCreatingRoom}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#d7b45f] px-6 py-3 text-xs font-black uppercase text-[#14170f] hover:bg-[#e7ca7e] transition shadow-lg shadow-[#d7b45f]/25 disabled:opacity-50"
+                      >
+                        {isCreatingRoom ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                        Generate Room Code
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Waiting for Friend Step */
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-400 mb-3">
+                      <Zap size={14} />
+                      Room Code Active
+                    </div>
+                    <h3 className="text-2xl font-black text-white">
+                      Waiting for Opponent
+                    </h3>
+                    <p className="mt-1 text-xs text-[#aab1a1]">
+                      Share this 6-digit code or link with your opponent. As soon as they join, the duel begins!
+                    </p>
+
+                    {/* 6-Digit Code Display */}
+                    <div className="my-6 flex items-center justify-center gap-2 sm:gap-3">
+                      {createdRoom.inviteCode.split("").map((digit, idx) => (
+                        <div
+                          key={idx}
+                          className="flex h-14 w-12 sm:h-16 sm:w-14 items-center justify-center rounded-2xl border border-[#d7b45f]/50 bg-[#d7b45f]/10 font-mono text-2xl sm:text-3xl font-black text-[#d7b45f] shadow-lg shadow-[#d7b45f]/10"
+                        >
+                          {digit}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Copy Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => handleCopyCode(createdRoom.inviteCode)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/10 transition"
+                      >
+                        {copiedCode ? <Check size={14} className="text-[#c5ff55]" /> : <Copy size={14} />}
+                        {copiedCode ? "Code Copied!" : "Copy 6-Digit Code"}
+                      </button>
+                      <button
+                        onClick={() => handleCopyLink(createdRoom.inviteCode)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#d7b45f] px-4 py-2.5 text-xs font-black uppercase text-[#14170f] hover:bg-[#e7ca7e] transition shadow-md shadow-[#d7b45f]/20"
+                      >
+                        {copiedLink ? <Check size={14} className="text-[#14170f]" /> : <Link2 size={14} />}
+                        {copiedLink ? "Link Copied!" : "Copy Direct Link"}
+                      </button>
+                    </div>
+
+                    {/* Live Pulse Radar */}
+                    <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-black/40 p-3.5 text-xs text-[#aab1a1]">
+                      <div className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#d7b45f] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-[#d7b45f]"></span>
+                      </div>
+                      <span>
+                        Listening on Room #{createdRoom.inviteCode} • {customRoomDuration}m {customRoomDifficulty}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-6 space-y-2">
+                      <button
+                        onClick={() => {
+                          handleCloseCreateModal();
+                          handleSparWithBot();
+                        }}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 text-xs font-bold transition shadow-md"
+                      >
+                        <Bot size={14} />
+                        Spar with AI Bot Instead
+                      </button>
+                      <button
+                        onClick={handleCloseCreateModal}
+                        className="w-full rounded-xl border border-white/10 bg-transparent px-4 py-2 text-xs font-semibold text-[#788071] hover:text-white transition"
+                      >
+                        Cancel Room
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ===================== JOIN PRIVATE ROOM MODAL ===================== */}
+        <AnimatePresence>
+          {showJoinRoomModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 15 }}
+                className="relative w-full max-w-md rounded-3xl border border-white/15 bg-[#161a14] p-6 sm:p-8 text-center shadow-2xl"
+              >
+                <button
+                  onClick={() => {
+                    setShowJoinRoomModal(false);
+                    setRoomError("");
+                  }}
+                  className="absolute right-5 top-5 rounded-full p-2 text-[#788071] hover:bg-white/10 hover:text-white transition"
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-black uppercase tracking-wider text-white mb-4">
+                  <Key size={14} className="text-[#d7b45f]" />
+                  Join Private Duel
+                </div>
+                <h3 className="text-2xl font-black text-white">
+                  Enter 6-Digit Room Code
+                </h3>
+                <p className="mt-1 text-xs text-[#aab1a1]">
+                  Enter the room code shared by your peer to enter their live 1v1 battle arena.
+                </p>
+
+                <div className="my-6">
+                  <input
+                    type="text"
+                    maxLength={10}
+                    autoFocus
+                    value={joinRoomCodeInput}
+                    onChange={(e) => {
+                      setJoinRoomCodeInput(e.target.value.toUpperCase());
+                      setRoomError("");
+                    }}
+                    placeholder="e.g. 849201"
+                    className="w-full rounded-2xl border border-white/20 bg-black/60 px-4 py-3.5 text-center font-mono text-2xl font-black tracking-widest text-[#d7b45f] uppercase placeholder:text-[#788071] focus:border-[#d7b45f] focus:outline-none"
+                  />
+                </div>
+
+                {roomError && (
+                  <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs font-semibold text-rose-400">
+                    {roomError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowJoinRoomModal(false);
+                      setRoomError("");
+                    }}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-[#aab1a1] hover:bg-white/10 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleJoinPrivateRoom(joinRoomCodeInput)}
+                    disabled={isJoiningRoom || !joinRoomCodeInput.trim()}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#d7b45f] px-6 py-3 text-xs font-black uppercase text-[#14170f] hover:bg-[#e7ca7e] transition shadow-lg shadow-[#d7b45f]/25 disabled:opacity-50"
+                  >
+                    {isJoiningRoom ? <Loader2 size={16} className="animate-spin" /> : <Swords size={16} />}
+                    Enter Battle Room
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ===================== MATCH FOUND OVERLAY ===================== */}
         <AnimatePresence>
           {matchState === "MATCH_FOUND" && (
@@ -907,6 +1331,13 @@ export default function Arena() {
 
               {/* Timer & Surrender */}
               <div className="flex items-center gap-3">
+                {opponent?.isPrivateRoom && (
+                  <div className="inline-flex items-center gap-1.5 rounded-xl border border-[#d7b45f]/40 bg-[#d7b45f]/15 px-3 py-1.5 text-[11px] font-black uppercase text-[#d7b45f]">
+                    <Key size={13} />
+                    <span>Room #{opponent.roomCode}</span>
+                  </div>
+                )}
+
                 {/* Anti-Cheat Strike Indicator */}
                 <div
                   className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black border transition ${
@@ -1165,17 +1596,37 @@ export default function Arena() {
                     isNight ? "border-white/10 bg-black/40" : "border-slate-200 bg-slate-50"
                   }`}
                 >
-                  <VersusClash className="h-24 w-24 mb-4 drop-shadow-lg" />
+                  <VersusClash className="h-20 w-20 mb-3 drop-shadow-lg" />
                   <button
                     onClick={handleStartQueue}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#c5ff55] px-6 py-3.5 text-xs font-black uppercase tracking-wider text-[#14170f] hover:bg-[#d5ff83] transition shadow-lg shadow-[#c5ff55]/25"
                   >
                     <Zap size={16} />
-                    Queue Match Now
+                    Queue Random Match
                   </button>
-                  <p className={`mt-2 text-[10px] ${isNight ? "text-[#788071]" : "text-slate-500"}`}>
-                    Connected to Live Judge & Match Engine
-                  </p>
+
+                  <div className="my-3 flex w-full items-center gap-2">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#788071]">OR PRIVATE DUEL</span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+
+                  <div className="flex w-full gap-2">
+                    <button
+                      onClick={() => setShowCreateRoomModal(true)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#d7b45f]/40 bg-[#d7b45f]/15 px-3 py-2.5 text-xs font-black uppercase text-[#d7b45f] hover:bg-[#d7b45f]/25 transition shadow-sm"
+                    >
+                      <Swords size={13} />
+                      Create Room
+                    </button>
+                    <button
+                      onClick={() => setShowJoinRoomModal(true)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-xs font-bold text-white hover:bg-white/10 transition"
+                    >
+                      <Key size={13} />
+                      Join Code
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.header>
@@ -1249,6 +1700,92 @@ export default function Arena() {
                     </div>
                   );
                 })}
+              </div>
+            </section>
+
+            {/* ===================== PRIVATE 1v1 CUSTOM ROOMS CARD ===================== */}
+            <section className="mt-8">
+              <div
+                className={`rounded-2xl border p-6 sm:p-8 transition-colors duration-200 ${
+                  isNight
+                    ? "border-[#d7b45f]/30 bg-gradient-to-r from-[#161a14] via-[#1b1e16] to-[#161a14] shadow-xl"
+                    : "border-amber-200 bg-amber-50/60 shadow-sm"
+                }`}
+              >
+                <div className="grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-center">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#d7b45f]/15 border border-[#d7b45f]/30 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#d7b45f]">
+                      <Swords size={13} />
+                      Private Custom Duel Rooms
+                    </div>
+                    <h3 className={`mt-3 text-2xl font-black ${isNight ? "text-white" : "text-slate-900"}`}>
+                      Duel a Friend with a 6-Digit Code
+                    </h3>
+                    <p className={`mt-2 text-xs leading-relaxed max-w-xl ${isNight ? "text-[#aab1a1]" : "text-slate-600"}`}>
+                      Host private showdowns with custom time limits (5, 10, 15, 25 mins) and selected difficulty. Share your generated 6-digit room code or invite link to battle head-to-head in real-time.
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => setShowCreateRoomModal(true)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#d7b45f] px-5 py-2.5 text-xs font-black uppercase text-[#14170f] hover:bg-[#e7ca7e] transition shadow-lg shadow-[#d7b45f]/25"
+                      >
+                        <Swords size={14} />
+                        Create Private Room
+                      </button>
+                      <button
+                        onClick={() => setShowJoinRoomModal(true)}
+                        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition ${
+                          isNight
+                            ? "border-white/20 bg-white/5 text-white hover:bg-white/10"
+                            : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Key size={14} />
+                        Enter 6-Digit Code
+                      </button>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`rounded-2xl border p-5 ${
+                      isNight ? "border-white/10 bg-black/40" : "border-amber-200 bg-white shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <p className={`text-xs font-bold ${isNight ? "text-white" : "text-slate-900"}`}>
+                        Quick Join Room
+                      </p>
+                      <span className="text-[10px] text-[#788071] font-mono">6 Digits</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={10}
+                        value={joinRoomCodeInput}
+                        onChange={(e) => {
+                          setJoinRoomCodeInput(e.target.value.toUpperCase());
+                          setRoomError("");
+                        }}
+                        placeholder="e.g. 849201"
+                        className="flex-1 rounded-xl border border-white/20 bg-black/60 px-3 py-2 text-center font-mono text-sm font-black tracking-widest text-[#d7b45f] uppercase placeholder:text-[#788071] focus:border-[#d7b45f] focus:outline-none"
+                      />
+                      <button
+                        onClick={() => handleJoinPrivateRoom(joinRoomCodeInput)}
+                        disabled={isJoiningRoom || !joinRoomCodeInput.trim()}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#d7b45f] px-4 py-2 text-xs font-black uppercase text-[#14170f] hover:bg-[#e7ca7e] transition shadow-md shadow-[#d7b45f]/20 disabled:opacity-50"
+                      >
+                        {isJoiningRoom ? <Loader2 size={13} className="animate-spin" /> : <ArrowRight size={14} />}
+                        Join
+                      </button>
+                    </div>
+                    {roomError && (
+                      <p className="mt-2 text-[11px] font-semibold text-rose-400">
+                        {roomError}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
 

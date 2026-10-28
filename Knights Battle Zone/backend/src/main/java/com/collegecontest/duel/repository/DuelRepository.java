@@ -41,4 +41,6 @@ public interface DuelRepository extends JpaRepository<Duel, Long> {
             Long user2Id,
             String mode,
             String difficulty);
+
+    Optional<Duel> findByInviteCode(String inviteCode);
 }

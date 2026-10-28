@@ -163,6 +163,21 @@ export const duelsApi = {
     return response.data;
   },
 
+  createCustomRoom: async (data) => {
+    const response = await API.post("/duels/rooms/create", data);
+    return response.data;
+  },
+
+  joinCustomRoom: async (code) => {
+    const response = await API.post("/duels/rooms/join", { code });
+    return response.data;
+  },
+
+  getRoomByCode: async (code) => {
+    const response = await API.get(`/duels/rooms/${code}`);
+    return response.data;
+  },
+
   joinMatchmaking: async (data) => {
     const response = await API.post("/duels/matchmaking", data);
     return response.data;
@@ -977,6 +992,44 @@ export const certificatesApi = {
 
   verify: async (uuid) => {
     const response = await API.get(`/certificates/verify/${uuid}`);
+    return response.data;
+  },
+};
+
+export const trackerApi = {
+  getConnections: async () => {
+    const response = await API.get("/tracker/platforms");
+    return response.data;
+  },
+
+  connectPlatform: async ({ platform, username, accessToken }) => {
+    const response = await API.post("/tracker/platforms/connect", {
+      platform,
+      username,
+      accessToken,
+    });
+    return response.data;
+  },
+
+  syncPlatform: async (platform) => {
+    const response = await API.post(`/tracker/platforms/${platform}/sync`);
+    return response.data;
+  },
+
+  syncAll: async () => {
+    const response = await API.post("/tracker/sync-all");
+    return response.data;
+  },
+
+  getSummary: async () => {
+    const response = await API.get("/tracker/summary");
+    return response.data;
+  },
+
+  getSkillGap: async (targetRole = "SDE") => {
+    const response = await API.get("/tracker/insights/skill-gap", {
+      params: { targetRole, useAi: false },
+    });
     return response.data;
   },
 };

@@ -35,8 +35,11 @@ import {
   UserPlus,
   Loader2,
   ArrowRight,
+  RefreshCw,
+  Plus,
+  Link2,
 } from "lucide-react";
-import { profileApi, badgesApi, activityApi } from "../services/api";
+import { profileApi, badgesApi, activityApi, trackerApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { KnightCrest, RankBadge, KnightLogo } from "../components/svg";
 
@@ -199,6 +202,18 @@ export default function Profile() {
   // Avatar upload
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  // External Platform Tracker State
+  const [trackerConnections, setTrackerConnections] = useState([]);
+  const [trackerSummary, setTrackerSummary] = useState(null);
+  const [syncingPlatform, setSyncingPlatform] = useState(null);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectPlatform, setConnectPlatform] = useState("LEETCODE");
+  const [connectUsername, setConnectUsername] = useState("");
+  const [connectToken, setConnectToken] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState("");
+  const [connectSuccess, setConnectSuccess] = useState("");
+
   useEffect(() => {
     if (isAuthenticated) {
       loadProfile();
@@ -255,6 +270,17 @@ export default function Profile() {
             }
           })
           .catch(() => null);
+
+        // Load External Platform Tracker Connections & Summary
+        trackerApi
+          .getConnections()
+          .then((conns) => setTrackerConnections(Array.isArray(conns) ? conns : []))
+          .catch(() => null);
+
+        trackerApi
+          .getSummary()
+          .then((sum) => setTrackerSummary(sum))
+          .catch(() => null);
       }
     } catch (err) {
       console.warn("Could not fetch remote profile:", err);
@@ -263,6 +289,63 @@ export default function Profile() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConnectPlatform = async (e) => {
+    e.preventDefault();
+    if (!connectUsername.trim()) return;
+    try {
+      setConnecting(true);
+      setConnectError("");
+      setConnectSuccess("");
+      await trackerApi.connectPlatform({
+        platform: connectPlatform,
+        username: connectUsername.trim(),
+        accessToken: connectToken.trim() || undefined,
+      });
+      setConnectSuccess(`Successfully connected ${connectPlatform}!`);
+      const conns = await trackerApi.getConnections().catch(() => []);
+      setTrackerConnections(conns);
+      setShowConnectModal(false);
+      setConnectUsername("");
+      setConnectToken("");
+      // Trigger background sync
+      handleSyncPlatform(connectPlatform);
+    } catch (err) {
+      setConnectError(err.response?.data?.message || `Failed to connect ${connectPlatform}`);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleSyncPlatform = async (platformName) => {
+    try {
+      setSyncingPlatform(platformName);
+      await trackerApi.syncPlatform(platformName);
+      const conns = await trackerApi.getConnections().catch(() => []);
+      setTrackerConnections(conns);
+      const sum = await trackerApi.getSummary().catch(() => null);
+      setTrackerSummary(sum);
+    } catch (err) {
+      console.warn("Tracker sync error:", err);
+    } finally {
+      setSyncingPlatform(null);
+    }
+  };
+
+  const handleSyncAllPlatforms = async () => {
+    try {
+      setSyncingPlatform("ALL");
+      await trackerApi.syncAll();
+      const conns = await trackerApi.getConnections().catch(() => []);
+      setTrackerConnections(conns);
+      const sum = await trackerApi.getSummary().catch(() => null);
+      setTrackerSummary(sum);
+    } catch (err) {
+      console.warn("Sync all error:", err);
+    } finally {
+      setSyncingPlatform(null);
     }
   };
 
@@ -636,7 +719,7 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* ==================== FOUR TABS ==================== */}
+          {/* ==================== TABS ==================== */}
           <div className="mt-8 flex items-center gap-2 border-b border-white/10 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab("overview")}
@@ -647,6 +730,17 @@ export default function Profile() {
               }`}
             >
               Knight Overview
+            </button>
+            <button
+              onClick={() => setActiveTab("tracker")}
+              className={`pb-3 px-3 text-xs font-bold transition border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === "tracker"
+                  ? "border-[#c5ff55] text-[#c5ff55]"
+                  : "border-transparent text-[#aab1a1] hover:text-white"
+              }`}
+            >
+              <Code2 size={14} />
+              Coding Profiles & Tracker {trackerConnections.length > 0 && `(${trackerConnections.length})`}
             </button>
             <button
               onClick={() => setActiveTab("trophies")}
@@ -983,6 +1077,55 @@ export default function Profile() {
                   </div>
                 </div>
 
+                {/* External Coding Handles Card in Overview */}
+                <div className="rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                      <Code2 size={16} className="text-[#c5ff55]" />
+                      Verified Coding Handles
+                    </h3>
+                    <button
+                      onClick={() => setActiveTab("tracker")}
+                      className="text-[11px] font-bold text-[#c5ff55] hover:underline"
+                    >
+                      Manage & Sync
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {["LEETCODE", "CODEFORCES", "GITHUB"].map((platform) => {
+                      const conn = trackerConnections.find((c) => c.platform === platform);
+                      const icon = platform === "LEETCODE" ? "🟡" : platform === "CODEFORCES" ? "🔷" : "🐙";
+                      const name = platform === "LEETCODE" ? "LeetCode" : platform === "CODEFORCES" ? "Codeforces" : "GitHub";
+                      return (
+                        <div
+                          key={platform}
+                          className="flex items-center justify-between p-2.5 rounded-xl border border-white/5 bg-black/40 text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{icon}</span>
+                            <span className="font-bold text-white">{name}</span>
+                          </div>
+                          {conn ? (
+                            <span className="font-mono text-xs font-semibold text-[#c5ff55]">
+                              @{conn.username}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setConnectPlatform(platform);
+                                setShowConnectModal(true);
+                              }}
+                              className="text-[10px] text-[#788071] hover:text-[#c5ff55] font-semibold"
+                            >
+                              + Connect
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {profile?.avatarUrl && (
                   <button
                     onClick={handleRemoveAvatar}
@@ -995,6 +1138,222 @@ export default function Profile() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ==================== TAB: CODING PROFILES & TRACKER ==================== */}
+        {activeTab === "tracker" && (
+          <div className="space-y-6">
+            {/* Header: Tracker Overview */}
+            <div className="rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#c5ff55]/10 border border-[#c5ff55]/30 text-[#c5ff55] shadow-lg shadow-[#c5ff55]/10">
+                    <Code2 size={32} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black text-white">External Profiles & Problem Tracker</h3>
+                      <span className="rounded-full bg-[#c5ff55]/15 border border-[#c5ff55]/30 px-2.5 py-0.5 text-[10px] font-black uppercase text-[#c5ff55]">
+                        Live Platform Sync
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-[#aab1a1]">
+                      Connect LeetCode, Codeforces, and GitHub. Sync your verified solves, contest ratings, and public contributions into KnightZone.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full lg:w-auto">
+                  <button
+                    onClick={() => setShowConnectModal(true)}
+                    className="flex-1 lg:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-[#c5ff55] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#14170f] hover:bg-[#d5ff83] transition shadow-lg shadow-[#c5ff55]/20"
+                  >
+                    <Plus size={14} /> Connect Platform
+                  </button>
+
+                  {trackerConnections.length > 0 && (
+                    <button
+                      onClick={handleSyncAllPlatforms}
+                      disabled={syncingPlatform !== null}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/10 transition disabled:opacity-50"
+                    >
+                      <RefreshCw size={14} className={syncingPlatform === "ALL" ? "animate-spin text-[#c5ff55]" : ""} />
+                      {syncingPlatform === "ALL" ? "Syncing All..." : "Sync All"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Connected Platforms Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {["LEETCODE", "CODEFORCES", "GITHUB"].map((platform) => {
+                const conn = trackerConnections.find((c) => c.platform === platform);
+                const isSyncing = syncingPlatform === platform;
+
+                const meta = {
+                  LEETCODE: {
+                    name: "LeetCode",
+                    color: "border-amber-500/30 bg-amber-500/[0.04]",
+                    icon: "🟡",
+                    desc: "Algorithmic practice, submission streak, and topic mastery.",
+                  },
+                  CODEFORCES: {
+                    name: "Codeforces",
+                    color: "border-blue-500/30 bg-blue-500/[0.04]",
+                    icon: "🔷",
+                    desc: "Official contest rating, division rank, and competitive solves.",
+                  },
+                  GITHUB: {
+                    name: "GitHub",
+                    color: "border-purple-500/30 bg-purple-500/[0.04]",
+                    icon: "🐙",
+                    desc: "Public repositories, commit streaks, and open source contributions.",
+                  },
+                }[platform];
+
+                return (
+                  <div
+                    key={platform}
+                    className={`rounded-2xl border p-5 transition bg-[#161a14] ${
+                      conn ? meta.color : "border-white/10 bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{meta.icon}</span>
+                        <h4 className="text-sm font-bold text-white">{meta.name}</h4>
+                      </div>
+                      {conn ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Connected
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-[#788071]">Not Linked</span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-[#aab1a1] mb-4 min-h-[32px]">{meta.desc}</p>
+
+                    {conn ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
+                          <span className="text-[11px] text-[#788071]">Username:</span>
+                          <span className="font-mono text-xs font-bold text-[#c5ff55]">@{conn.username}</span>
+                        </div>
+
+                        {conn.lastFetched && (
+                          <div className="text-[10px] text-[#788071] text-center">
+                            Last synced: {new Date(conn.lastFetched).toLocaleString()}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => handleSyncPlatform(platform)}
+                          disabled={isSyncing}
+                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-bold text-white hover:bg-white/10 transition disabled:opacity-50"
+                        >
+                          <RefreshCw size={13} className={isSyncing ? "animate-spin text-[#c5ff55]" : ""} />
+                          {isSyncing ? "Syncing..." : "Sync Now"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setConnectPlatform(platform);
+                          setShowConnectModal(true);
+                        }}
+                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#c5ff55]/10 border border-[#c5ff55]/30 py-2 text-xs font-bold text-[#c5ff55] hover:bg-[#c5ff55] hover:text-[#14170f] transition"
+                      >
+                        <Plus size={13} /> Link {meta.name}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Aggregated Analytics Dashboard if Summary Exists */}
+            {trackerSummary && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-6">
+                  {/* Solved Problems Breakdown */}
+                  <div className="rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#788071] mb-4 flex items-center gap-2">
+                      <TrendingUp size={14} className="text-[#c5ff55]" />
+                      Multi-Platform Solved Breakdown
+                    </h4>
+
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center">
+                        <span className="text-[10px] uppercase font-bold text-emerald-400 block mb-1">Easy Solved</span>
+                        <span className="text-2xl font-black text-white">{trackerSummary.difficultyCounts?.EASY || 0}</span>
+                      </div>
+                      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+                        <span className="text-[10px] uppercase font-bold text-amber-400 block mb-1">Medium Solved</span>
+                        <span className="text-2xl font-black text-white">{trackerSummary.difficultyCounts?.MEDIUM || 0}</span>
+                      </div>
+                      <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 text-center">
+                        <span className="text-[10px] uppercase font-bold text-rose-400 block mb-1">Hard Solved</span>
+                        <span className="text-2xl font-black text-white">{trackerSummary.difficultyCounts?.HARD || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Strong & Weak Topics */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block mb-2">
+                          Strong Algorithmic Areas
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(trackerSummary.strongTopics?.length > 0 ? trackerSummary.strongTopics : ["Arrays", "Hashing", "Two Pointers"]).map((topic, i) => (
+                            <span key={i} className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 text-[11px] font-semibold text-emerald-300">
+                              ✓ {topic}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block mb-2">
+                          Recommended Practice Areas
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(trackerSummary.weakTopics?.length > 0 ? trackerSummary.weakTopics : ["Dynamic Programming", "Graph Theory"]).map((topic, i) => (
+                            <span key={i} className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2 py-1 text-[11px] font-semibold text-amber-300">
+                              ⚡ {topic}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Col: GitHub & Sync Summary */}
+                <div className="space-y-6">
+                  <div className="rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#788071] mb-4 flex items-center gap-2">
+                      <GithubIcon className="w-4 h-4 text-white" />
+                      GitHub Metrics
+                    </h4>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
+                        <span className="text-xs text-[#aab1a1]">Public Repositories</span>
+                        <span className="font-mono text-sm font-bold text-white">{trackerSummary.githubRepositories || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
+                        <span className="text-xs text-[#aab1a1]">Tracked Commits</span>
+                        <span className="font-mono text-sm font-bold text-[#c5ff55]">{trackerSummary.githubCommits || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1526,6 +1885,94 @@ export default function Profile() {
           </form>
         )}
       </div>
+
+      {/* ==================== CONNECT PLATFORM MODAL ==================== */}
+      {showConnectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <Link2 size={16} className="text-[#c5ff55]" />
+                Connect Competitive Profile
+              </h3>
+              <button
+                onClick={() => setShowConnectModal(false)}
+                className="rounded-lg p-1 text-[#788071] hover:bg-white/10 hover:text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConnectPlatform} className="mt-4 space-y-4">
+              {connectError && (
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs font-bold text-rose-300">
+                  {connectError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-white mb-1.5">Select Platform</label>
+                <select
+                  value={connectPlatform}
+                  onChange={(e) => setConnectPlatform(e.target.value)}
+                  className="w-full rounded-xl border border-white/15 bg-black/40 px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:border-[#c5ff55] transition"
+                >
+                  <option value="LEETCODE" className="bg-[#161a14] text-white">LeetCode (GraphQL Public Sync)</option>
+                  <option value="CODEFORCES" className="bg-[#161a14] text-white">Codeforces (Official Rating & Solves)</option>
+                  <option value="GITHUB" className="bg-[#161a14] text-white">GitHub (Repos & Contributions)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-white mb-1.5">
+                  {connectPlatform === "LEETCODE" ? "LeetCode Username" : connectPlatform === "CODEFORCES" ? "Codeforces Handle" : "GitHub Username"}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={connectUsername}
+                  onChange={(e) => setConnectUsername(e.target.value)}
+                  placeholder="e.g. touriste, neetcode, alex_dev"
+                  className="w-full rounded-xl border border-white/15 bg-black/40 px-3.5 py-2.5 text-xs font-medium text-white placeholder-[#788071] focus:outline-none focus:border-[#c5ff55] transition"
+                />
+              </div>
+
+              {connectPlatform === "GITHUB" && (
+                <div>
+                  <label className="block text-xs font-bold text-white mb-1.5">
+                    GitHub Personal Access Token <span className="text-[#788071] font-normal">(Optional, for private repos)</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={connectToken}
+                    onChange={(e) => setConnectToken(e.target.value)}
+                    placeholder="ghp_..."
+                    className="w-full rounded-xl border border-white/15 bg-black/40 px-3.5 py-2.5 text-xs font-medium text-white placeholder-[#788071] focus:outline-none focus:border-[#c5ff55] transition"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConnectModal(false)}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white hover:bg-white/10 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={connecting}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#c5ff55] px-5 py-2 text-xs font-black uppercase tracking-wider text-[#14170f] hover:bg-[#d5ff83] transition shadow-md shadow-[#c5ff55]/20 disabled:opacity-50"
+                >
+                  {connecting ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  {connecting ? "Connecting..." : "Connect & Verify"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

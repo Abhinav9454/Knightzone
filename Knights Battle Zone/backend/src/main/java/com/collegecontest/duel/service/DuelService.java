@@ -119,6 +119,102 @@ public class DuelService {
     }
 
     @Transactional
+    public DuelDTO createCustomRoom(Long hostUserId, DuelCreateRequest request) {
+        User host = requireUser(hostUserId, "Host user not found");
+
+        String mode = normalizeMode(request.getMode());
+        String difficulty = normalizeDifficulty(request.getDifficulty());
+        int durationSeconds = normalizeDuration(request.getDurationSeconds());
+
+        String roomCode;
+        do {
+            roomCode = String.format("%06d", random.nextInt(1000000));
+        } while (duelRepository.findByInviteCode(roomCode).isPresent());
+
+        Duel duel = new Duel();
+        duel.setDuelDate(LocalDate.now());
+        duel.setUser1Id(host.getId());
+        duel.setUser2Id(0L);
+        duel.setMode(mode);
+        duel.setDifficulty(difficulty);
+        duel.setDurationSeconds(durationSeconds);
+        duel.setStatus("PENDING");
+        duel.setCreatedAt(LocalDateTime.now());
+        duel.setPlayer1Completed(false);
+        duel.setPlayer2Completed(false);
+        duel.setInviteCode(roomCode);
+
+        if ("CODING".equalsIgnoreCase(mode)) {
+            List<Problem> matching = problemRepository.findAll().stream()
+                    .filter(p -> "ANY".equalsIgnoreCase(difficulty) || difficulty.equalsIgnoreCase(p.getDifficulty()))
+                    .toList();
+            if (!matching.isEmpty()) {
+                duel.setProblemId(matching.get(random.nextInt(matching.size())).getId());
+            } else {
+                List<Problem> any = problemRepository.findAll();
+                duel.setProblemId(!any.isEmpty() ? any.get(0).getId() : 0L);
+            }
+        } else {
+            duel.setProblemId(0L);
+        }
+
+        Duel saved = duelRepository.save(duel);
+        return toDTOs(List.of(saved)).get(0);
+    }
+
+    @Transactional
+    public DuelDTO joinByInviteCode(Long currentUserId, String inviteCode) {
+        if (inviteCode == null || inviteCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Room code cannot be empty");
+        }
+        String cleanCode = inviteCode.trim().toUpperCase(Locale.ROOT);
+
+        Duel duel = duelRepository.findByInviteCode(cleanCode)
+                .orElseThrow(() -> new IllegalArgumentException("Private duel room #" + cleanCode + " not found or expired"));
+
+        if (Objects.equals(duel.getUser1Id(), currentUserId)) {
+            return toDTOs(List.of(duel)).get(0);
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(duel.getStatus()) || "ABANDONED".equalsIgnoreCase(duel.getStatus())) {
+            throw new IllegalStateException("This duel room has already concluded");
+        }
+
+        if (Objects.equals(duel.getUser2Id(), currentUserId)) {
+            return toDTOs(List.of(duel)).get(0);
+        }
+
+        if (!"PENDING".equalsIgnoreCase(duel.getStatus())) {
+            throw new IllegalStateException("Duel room is already full or in progress");
+        }
+
+        duel.setUser2Id(currentUserId);
+        duel.setStatus("ACTIVE");
+        duel.setStartedAt(LocalDateTime.now());
+
+        if (duel.getProblemId() == null || duel.getProblemId() == 0L) {
+            List<Problem> problems = problemRepository.findAll();
+            if (!problems.isEmpty()) {
+                duel.setProblemId(problems.get(random.nextInt(problems.size())).getId());
+            }
+        }
+
+        Duel saved = duelRepository.save(duel);
+        return toDTOs(List.of(saved)).get(0);
+    }
+
+    @Transactional(readOnly = true)
+    public DuelDTO getRoomByCode(String inviteCode, Long currentUserId) {
+        if (inviteCode == null || inviteCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Room code cannot be empty");
+        }
+        String cleanCode = inviteCode.trim().toUpperCase(Locale.ROOT);
+        Duel duel = duelRepository.findByInviteCode(cleanCode)
+                .orElseThrow(() -> new IllegalArgumentException("Private duel room #" + cleanCode + " not found"));
+        return toDTOs(List.of(duel)).get(0);
+    }
+
+    @Transactional
     public DuelDTO joinMatchmaking(Long currentUserId, DuelMatchmakingRequest request) {
         User currentUser = requireUser(currentUserId, "User not found");
 

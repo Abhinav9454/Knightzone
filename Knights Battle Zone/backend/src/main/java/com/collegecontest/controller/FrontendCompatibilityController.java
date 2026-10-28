@@ -68,11 +68,34 @@ public class FrontendCompatibilityController {
 
     @GetMapping("/activity/calendar")
     public List<Map<String, Object>> getActivityCalendar() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = null;
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            User user = userRepository.findByEmail(auth.getName()).orElse(null);
+            if (user != null) {
+                userId = user.getId();
+            }
+        }
+
+        Map<String, Integer> countsByDate = new HashMap<>();
+        if (userId != null) {
+            LocalDateTime since = LocalDateTime.now().minusDays(CALENDAR_LOOKBACK_DAYS);
+            List<Object[]> dailyCounts = submissionRepository.countDailySubmissionsByUserId(userId, since);
+            if (dailyCounts != null) {
+                for (Object[] row : dailyCounts) {
+                    if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                        String dateStr = row[0].toString();
+                        int cnt = ((Number) row[1]).intValue();
+                        countsByDate.put(dateStr, cnt);
+                    }
+                }
+            }
+        }
+
         List<Map<String, Object>> out = new ArrayList<>(CALENDAR_LOOKBACK_DAYS);
-        Random random = new Random(42);
         for (int dayOffset = CALENDAR_LOOKBACK_DAYS - 1; dayOffset >= 0; dayOffset--) {
             LocalDate date = LocalDate.now().minusDays(dayOffset);
-            int count = random.nextDouble() > ACTIVE_DAY_THRESHOLD ? random.nextInt(MAX_DAILY_ACTIVITY) : 0;
+            int count = countsByDate.getOrDefault(date.toString(), 0);
             out.add(Map.of("date", date.toString(), "count", count));
         }
         return out;

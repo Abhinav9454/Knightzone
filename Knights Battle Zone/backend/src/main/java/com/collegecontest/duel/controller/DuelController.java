@@ -61,6 +61,25 @@ public class DuelController {
         return ResponseEntity.status(HttpStatus.CREATED).body(duel);
     }
 
+    @PostMapping("/rooms/create")
+    public ResponseEntity<DuelDTO> createCustomRoom(@RequestBody DuelCreateRequest request) {
+        Long currentUserId = currentUserId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(duelService.createCustomRoom(currentUserId, request));
+    }
+
+    @PostMapping("/rooms/join")
+    public ResponseEntity<DuelDTO> joinCustomRoom(@RequestBody java.util.Map<String, String> body) {
+        Long currentUserId = currentUserId();
+        String code = body.get("code");
+        return ResponseEntity.ok(duelService.joinByInviteCode(currentUserId, code));
+    }
+
+    @GetMapping("/rooms/{code}")
+    public ResponseEntity<DuelDTO> getRoomByCode(@PathVariable String code) {
+        Long currentUserId = currentUserId();
+        return ResponseEntity.ok(duelService.getRoomByCode(code, currentUserId));
+    }
+
     @PostMapping("/matchmaking")
     public ResponseEntity<DuelDTO> matchmaking(@RequestBody DuelMatchmakingRequest request) {
         Long currentUserId = currentUserId();

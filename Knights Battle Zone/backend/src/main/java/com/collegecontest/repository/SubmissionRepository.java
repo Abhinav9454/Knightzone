@@ -77,4 +77,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Modifying
     @Query("DELETE FROM Submission s WHERE s.problem.contest.id = :contestId")
     void deleteByContestId(@Param("contestId") Long contestId);
+
+    @Query(value = "SELECT DATE(submitted_at) as sub_date, COUNT(*) as cnt " +
+            "FROM submissions " +
+            "WHERE user_id = :userId AND submitted_at >= :since " +
+            "GROUP BY DATE(submitted_at)", nativeQuery = true)
+    List<Object[]> countDailySubmissionsByUserId(@Param("userId") Long userId, @Param("since") LocalDateTime since);
 }
