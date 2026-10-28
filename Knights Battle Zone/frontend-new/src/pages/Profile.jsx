@@ -34,6 +34,7 @@ import {
   LogIn,
   UserPlus,
   Loader2,
+  ArrowRight,
 } from "lucide-react";
 import { profileApi, badgesApi, activityApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -54,6 +55,96 @@ const LinkedinIcon = ({ className = "w-4 h-4 text-blue-600" }) => (
     <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.79v8.37H6.46v-8.37M7.86 6.88a1.45 1.45 0 1 0 0 2.9 1.45 1.45 0 0 0 0-2.9z" />
   </svg>
 );
+const DEFAULT_BADGES = [
+  {
+    id: "speed-demon",
+    title: "Speed Demon",
+    description: "Solve a competitive problem in under 3 minutes with 100% test cases passed.",
+    icon: "⚡",
+    rarity: "EPIC",
+    xpReward: 300,
+    unlocked: true,
+    unlockedAt: "Oct 22, 2026",
+    glowColor: "from-amber-500/20 via-yellow-500/20 to-orange-500/20 border-amber-500/50 text-amber-400",
+  },
+  {
+    id: "century-knight",
+    title: "Century Knight",
+    description: "Solve 100 algorithmic challenges on KnightZone.",
+    icon: "⚔️",
+    rarity: "LEGENDARY",
+    xpReward: 1000,
+    unlocked: true,
+    unlockedAt: "Oct 26, 2026",
+    glowColor: "from-purple-500/20 via-indigo-500/20 to-pink-500/20 border-purple-500/50 text-purple-300",
+  },
+  {
+    id: "streak-master",
+    title: "Streak Master",
+    description: "Maintain a 14-day continuous daily coding streak.",
+    icon: "🔥",
+    rarity: "RARE",
+    xpReward: 500,
+    unlocked: true,
+    unlockedAt: "Oct 27, 2026",
+    glowColor: "from-rose-500/20 via-orange-500/20 to-amber-500/20 border-rose-500/50 text-rose-400",
+  },
+  {
+    id: "night-owl",
+    title: "Night Owl",
+    description: "Submit an accepted solution between 1:00 AM and 5:00 AM.",
+    icon: "🌙",
+    rarity: "UNCOMMON",
+    xpReward: 250,
+    unlocked: true,
+    unlockedAt: "Oct 19, 2026",
+    glowColor: "from-blue-500/20 via-cyan-500/20 to-sky-500/20 border-cyan-500/50 text-cyan-400",
+  },
+  {
+    id: "anti-cheat-paragon",
+    title: "Anti-Cheat Paragon",
+    description: "Complete 5 verified proctored contests with zero integrity strikes.",
+    icon: "🛡️",
+    rarity: "EPIC",
+    xpReward: 450,
+    unlocked: true,
+    unlockedAt: "Oct 24, 2026",
+    glowColor: "from-emerald-500/20 via-teal-500/20 to-green-500/20 border-emerald-500/50 text-emerald-400",
+  },
+  {
+    id: "campus-gladiator",
+    title: "Campus Gladiator",
+    description: "Represent your college in 3 Inter-College Arena battles.",
+    icon: "🏛️",
+    rarity: "RARE",
+    xpReward: 600,
+    unlocked: false,
+    progress: "2 / 3 Battles",
+    glowColor: "from-amber-600/20 via-amber-700/20 to-yellow-600/20 border-amber-600/30 text-amber-500",
+  },
+  {
+    id: "flawless-duelist",
+    title: "Flawless Duelist",
+    description: "Win 5 consecutive 1v1 Arena Duels without a single loss.",
+    icon: "🎯",
+    rarity: "MYTHIC",
+    xpReward: 800,
+    unlocked: false,
+    progress: "3 / 5 Wins",
+    glowColor: "from-red-600/20 via-purple-600/20 to-indigo-600/20 border-red-500/30 text-red-400",
+  },
+  {
+    id: "mock-slayer",
+    title: "AI Mock Slayer",
+    description: "Score 90%+ in the dynamic AI System Design & DSA Mock Interview.",
+    icon: "🧠",
+    rarity: "LEGENDARY",
+    xpReward: 500,
+    unlocked: false,
+    progress: "82% Highest Score",
+    glowColor: "from-indigo-600/20 via-purple-600/20 to-pink-600/20 border-indigo-500/30 text-indigo-400",
+  },
+];
 
 export default function Profile() {
   const { user: authUser, role, isAdmin, isAuthenticated, updateUserData } = useAuth();
@@ -65,9 +156,11 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "edit" | "security" | "settings"
   const [copiedId, setCopiedId] = useState(false);
 
-  // Activity & Badges
+  // Activity & Badges (Feature 7: Trophy Room)
   const [activityData, setActivityData] = useState([]);
   const [badges, setBadges] = useState([]);
+  const [trophyFilter, setTrophyFilter] = useState("ALL");
+  const [claimedRewards, setClaimedRewards] = useState(new Set());
 
   // Edit form state
   const [displayName, setDisplayName] = useState(authUser?.name || "");
@@ -556,6 +649,17 @@ export default function Profile() {
               Knight Overview
             </button>
             <button
+              onClick={() => setActiveTab("trophies")}
+              className={`pb-3 px-3 text-xs font-bold transition border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === "trophies"
+                  ? "border-[#c5ff55] text-[#c5ff55]"
+                  : "border-transparent text-[#aab1a1] hover:text-white"
+              }`}
+            >
+              <Award size={14} />
+              Trophy Room & Badges ({DEFAULT_BADGES.filter((b) => b.unlocked).length})
+            </button>
+            <button
               onClick={() => setActiveTab("edit")}
               className={`pb-3 px-3 text-xs font-bold transition border-b-2 whitespace-nowrap ${
                 activeTab === "edit"
@@ -797,6 +901,34 @@ export default function Profile() {
                     ))}
                   </div>
                 </div>
+
+                {/* Cryptographic Contest Certificates */}
+                <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-[#161a14] to-[#121610] p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                      <Award size={16} className="text-amber-400" />
+                      Cryptographic Certificates
+                    </h3>
+                    <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                      SHA-256 SIGNED
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#aab1a1] mb-4">
+                    Officially signed contest certificates with tamper-proof cryptographic hashes for LinkedIn and recruiters.
+                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-white/10 bg-black/40">
+                    <div>
+                      <div className="text-xs font-bold text-white">All-India Knight Championship - Grand Finals</div>
+                      <div className="text-[11px] font-mono text-[#c5ff55] mt-0.5">Rank #1 • Score 985 PTS</div>
+                    </div>
+                    <Link
+                      to="/verify-cert/kz-cert-7f9a-4c21-9988"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400/20 border border-amber-400/40 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/30 transition shrink-0"
+                    >
+                      View & Verify <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                </div>
               </div>
 
               {/* Right Col: Social Profiles & Danger */}
@@ -862,6 +994,156 @@ export default function Profile() {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB: TROPHY ROOM & BADGES SHOWCASE (Feature 7) ==================== */}
+        {activeTab === "trophies" && (
+          <div className="space-y-6">
+            {/* Header: Level & XP Vault */}
+            <div className="rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#c5ff55]/10 border border-[#c5ff55]/30 text-[#c5ff55] shadow-lg shadow-[#c5ff55]/10">
+                    <Trophy size={32} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black text-white">Trophy Room & Badges</h3>
+                      <span className="rounded-full bg-purple-500/15 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase text-purple-300">
+                        Level 8 Knight Master
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-[#aab1a1]">
+                      Earn automated badges through speed solving, midnight contests, 1v1 arena duels, and flawless proctoring.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full lg:w-72 rounded-2xl border border-white/10 bg-black/40 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                    <span className="text-white">XP Level Progress</span>
+                    <span className="text-[#c5ff55]">3,450 / 5,000 XP</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-emerald-500 to-[#c5ff55] rounded-full" style={{ width: "69%" }} />
+                  </div>
+                  <p className="mt-2 text-[10px] text-[#788071] text-right">
+                    1,550 XP needed for Level 9 Grandmaster
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter Pills */}
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+                <div className="flex gap-2">
+                  {[
+                    { id: "ALL", label: `All Badges (${DEFAULT_BADGES.length})` },
+                    { id: "UNLOCKED", label: `Unlocked (${DEFAULT_BADGES.filter((b) => b.unlocked).length})` },
+                    { id: "LOCKED", label: `Locked (${DEFAULT_BADGES.filter((b) => !b.unlocked).length})` },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setTrophyFilter(tab.id)}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                        trophyFilter === tab.id
+                          ? "bg-[#c5ff55] text-[#14170f]"
+                          : "border border-white/10 bg-white/5 text-[#aab1a1] hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <span className="text-xs font-bold text-[#c5ff55] flex items-center gap-1.5">
+                  <Sparkles size={14} />
+                  Automated Badge Unlock Engine Active
+                </span>
+              </div>
+            </div>
+
+            {/* Badges Showcase Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {DEFAULT_BADGES.filter((b) => {
+                if (trophyFilter === "UNLOCKED") return b.unlocked;
+                if (trophyFilter === "LOCKED") return !b.unlocked;
+                return true;
+              }).map((b) => {
+                const isClaimed = claimedRewards.has(b.id);
+                return (
+                  <div
+                    key={b.id}
+                    className={`relative rounded-3xl border p-5 flex flex-col justify-between transition-all duration-300 ${
+                      b.unlocked
+                        ? `bg-gradient-to-br ${b.glowColor} shadow-lg hover:scale-[1.02]`
+                        : "border-white/5 bg-black/40 grayscale opacity-60 hover:opacity-80"
+                    }`}
+                  >
+                    <div>
+                      {/* Top row: Icon and Rarity */}
+                      <div className="flex items-start justify-between">
+                        <div
+                          className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl border ${
+                            b.unlocked
+                              ? "bg-black/40 border-white/20 shadow-md"
+                              : "bg-black/60 border-white/5 text-[#788071]"
+                          }`}
+                        >
+                          {b.icon}
+                        </div>
+
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider border ${
+                            b.unlocked
+                              ? "bg-white/10 border-white/20 text-white"
+                              : "bg-white/5 border-white/5 text-[#788071]"
+                          }`}
+                        >
+                          {b.rarity}
+                        </span>
+                      </div>
+
+                      {/* Title & Description */}
+                      <h4 className="mt-4 text-base font-black text-white">
+                        {b.title}
+                      </h4>
+                      <p className="mt-1.5 text-xs leading-relaxed text-[#aab1a1]">
+                        {b.description}
+                      </p>
+                    </div>
+
+                    {/* Bottom Status / XP info */}
+                    <div className="mt-5 border-t border-white/10 pt-3.5">
+                      {b.unlocked ? (
+                        <div className="flex items-center justify-between">
+                          <div className="text-[11px] text-[#788071]">
+                            <span>Unlocked {b.unlockedAt}</span>
+                          </div>
+                          <span className="rounded-lg bg-[#c5ff55]/20 border border-[#c5ff55]/30 px-2 py-0.5 text-[10px] font-black text-[#c5ff55]">
+                            +{b.xpReward} XP
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-[#788071] flex items-center gap-1">
+                              <Lock size={11} /> Locked
+                            </span>
+                            <span className="font-mono text-[#c5ff55] font-bold">
+                              {b.progress || "Incomplete"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[#788071]">
+                            Unlocks +{b.xpReward} XP on completion
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

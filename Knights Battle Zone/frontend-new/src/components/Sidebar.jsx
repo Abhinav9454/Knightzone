@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Code2,
@@ -11,18 +11,26 @@ import {
   UserCheck,
   HelpCircle,
   Users,
-  Keyboard,
   Briefcase,
   ShieldAlert,
   LogIn,
   X,
+  Video,
+  FileText,
+  FileCheck,
+  GraduationCap,
+  GitPullRequest,
+  Bot,
+  LifeBuoy,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { KnightLogo } from "./svg";
 import ThemeToggle from "./ThemeToggle";
 
-const navigation = [
+// Regular Candidate & Student Navigation
+const candidateNavigation = [
   {
     label: "OVERVIEW",
     items: [
@@ -36,43 +44,88 @@ const navigation = [
       { name: "Contests", path: "/contests", icon: Trophy },
       { name: "Arena", path: "/arena", icon: Gamepad2 },
       { name: "Leaderboard", path: "/leaderboard", icon: Medal },
+      { name: "Inter-College", path: "/inter-college", icon: GraduationCap },
     ],
   },
   {
     label: "COMMUNITY & PRACTICE",
     items: [
+      { name: "AI & Live Chat", path: "/chat", icon: Bot },
       { name: "Quizzes", path: "/quizzes", icon: HelpCircle },
       { name: "Clubs & Guilds", path: "/clubs", icon: Users },
-      { name: "Speed Typing", path: "/typing", icon: Keyboard },
+      { name: "Contributions", path: "/contributions", icon: GitPullRequest },
     ],
   },
   {
-    label: "CAREER & PROFILE",
+    label: "CAREER & PREPARATION",
     items: [
       { name: "Careers & Jobs", path: "/jobs", icon: Briefcase },
+      { name: "Mock Interviews", path: "/mock-interviews", icon: Video },
+      { name: "Resume Builder", path: "/resume-builder", icon: FileText },
+      { name: "ATS Resume Audit", path: "/resume-strength", icon: FileCheck },
       { name: "Knight Profile", path: "/profile", icon: UserCheck },
+    ],
+  },
+];
+
+// Exclusive Admin Console Navigation (Candidate clutter hidden)
+const adminNavigation = [
+  {
+    label: "COMMAND CENTER",
+    items: [
+      { name: "Executive Overview", path: "/admin/overview", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "COMPETITIONS & REPO",
+    items: [
+      { name: "Contest Studio", path: "/admin/contests", icon: Trophy },
+      { name: "Problem Engineering", path: "/admin/problems", icon: Code2 },
+      { name: "Quiz Engine", path: "/admin/quizzes", icon: HelpCircle },
+    ],
+  },
+  {
+    label: "INTEGRITY & PROCTORING",
+    items: [
+      { name: "Anti-Cheat & 3-Strike", path: "/admin/anti-cheat", icon: ShieldAlert },
+      { name: "Knights & Roles", path: "/admin/users", icon: Users },
+    ],
+  },
+  {
+    label: "OPERATIONS & CAREERS",
+    items: [
+      { name: "Job Openings", path: "/admin/jobs", icon: Briefcase },
+      { name: "Live Support Desk", path: "/admin/support", icon: LifeBuoy },
     ],
   },
 ];
 
 const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const { user, role, isAdmin, isAuthenticated, logout } = useAuth();
+  const { user, role, isAdmin, adminMode, toggleAdminMode, isAuthenticated, logout } = useAuth();
   const { isNight } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const navGroups = [
-    ...navigation,
-    ...(isAdmin
-      ? [
-          {
-            label: "ADMINISTRATION",
-            items: [
-              { name: "Admin Portal", path: "/admin", icon: ShieldAlert },
-            ],
-          },
-        ]
-      : []),
-  ];
+  // If user is Admin and adminMode is active: ONLY show admin tools, hide candidate stuff!
+  const isDedicatedAdminView = isAdmin && adminMode !== false;
+  const navGroups = isDedicatedAdminView ? adminNavigation : candidateNavigation;
+
+  // Custom active matcher for smooth sub-routes and /admin fallback
+  const isItemActive = (itemPath) => {
+    const cur = location.pathname;
+    if (itemPath === "/admin/overview") {
+      return cur === "/admin" || cur === "/admin/" || cur === "/admin/overview";
+    }
+    if (itemPath === "/admin/anti-cheat") {
+      return cur === "/admin/anti-cheat" || cur === "/admin/integrity";
+    }
+    if (cur === itemPath) return true;
+    if (itemPath !== "/admin" && itemPath !== "/dashboard" && cur.startsWith(itemPath)) {
+      return true;
+    }
+    return false;
+  };
 
   return (
     <>
@@ -100,17 +153,22 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
           }`}
         >
           <Link
-            to="/"
+            to={isDedicatedAdminView ? "/admin" : "/"}
             onClick={onClose}
             className="flex items-center gap-2.5"
           >
             <KnightLogo className="h-8 w-8" animated />
             <div>
               <p className={`text-sm font-black tracking-[0.13em] ${isNight ? "text-white" : "text-slate-900"}`}>
-                KNIGHT<span className={isNight ? "text-[#c5ff55]" : "text-emerald-600"}>ZONE</span>
+                KNIGHT
+                <span className={isDedicatedAdminView ? "text-purple-400" : isNight ? "text-[#c5ff55]" : "text-emerald-600"}>
+                  {isDedicatedAdminView ? "ADMIN" : "ZONE"}
+                </span>
               </p>
-              <p className={`text-[9px] font-bold uppercase tracking-[0.19em] ${isNight ? "text-[#95a390]" : "text-slate-500"}`}>
-                Think. Solve. Compete.
+              <p className={`text-[9px] font-bold uppercase tracking-[0.19em] ${
+                isDedicatedAdminView ? "text-purple-300/80" : isNight ? "text-[#95a390]" : "text-slate-500"
+              }`}>
+                {isDedicatedAdminView ? "Enterprise Console" : "Think. Solve. Compete."}
               </p>
             </div>
           </Link>
@@ -136,7 +194,11 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
               <div key={group.label}>
                 <p
                   className={`px-3 text-[10px] font-black font-mono uppercase tracking-[0.2em] whitespace-nowrap ${
-                    isNight ? "text-[#95a390]" : "text-slate-500"
+                    isDedicatedAdminView
+                      ? "text-purple-400/90"
+                      : isNight
+                      ? "text-[#95a390]"
+                      : "text-slate-500"
                   }`}
                 >
                   {group.label}
@@ -145,51 +207,50 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                 <div className="mt-1.5 space-y-1">
                   {group.items.map((item) => {
                     const Icon = item.icon;
+                    const active = isItemActive(item.path);
 
                     return (
                       <NavLink
                         key={item.name}
                         to={item.path}
                         onClick={onClose}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-200 ${
-                            isActive
-                              ? isNight
-                                ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10"
-                                : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20"
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-200 ${
+                          active
+                            ? isDedicatedAdminView
+                              ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20"
                               : isNight
-                              ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                          }`
-                        }
+                              ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10"
+                              : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20"
+                            : isNight
+                            ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        }`}
                       >
-                        {({ isActive }) => (
-                          <>
-                            <Icon
-                              size={17}
-                              className={`shrink-0 ${
-                                isActive
-                                  ? isNight
-                                    ? "text-[#c5ff55]"
-                                    : "text-white"
-                                  : isNight
-                                  ? "text-[#c2cbbe]"
-                                  : "text-slate-500"
-                              }`}
-                            />
-                            <span className="flex-1">{item.name}</span>
-                            <ChevronRight
-                              size={14}
-                              className={
-                                isActive
-                                  ? "opacity-80"
-                                  : isNight
-                                  ? "opacity-35 text-[#95a390]"
-                                  : "opacity-40 text-slate-400"
-                              }
-                            />
-                          </>
-                        )}
+                        <Icon
+                          size={17}
+                          className={`shrink-0 ${
+                            active
+                              ? isDedicatedAdminView
+                                ? "text-purple-300"
+                                : isNight
+                                ? "text-[#c5ff55]"
+                                : "text-white"
+                              : isNight
+                              ? "text-[#c2cbbe]"
+                              : "text-slate-500"
+                          }`}
+                        />
+                        <span className="flex-1">{item.name}</span>
+                        <ChevronRight
+                          size={14}
+                          className={
+                            active
+                              ? "opacity-80"
+                              : isNight
+                              ? "opacity-35 text-[#95a390]"
+                              : "opacity-40 text-slate-400"
+                          }
+                        />
                       </NavLink>
                     );
                   })}
@@ -219,18 +280,20 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
         >
           {isAuthenticated ? (
             <div className="space-y-2">
-              <Link
-                to="/profile"
-                onClick={onClose}
+              <div
                 className={`flex items-center gap-3 rounded-2xl border p-2.5 transition ${
                   isNight
-                    ? "border-white/10 bg-white/5 hover:bg-white/10 hover:border-[#c5ff55]/40"
-                    : "border-slate-200 bg-white hover:bg-slate-100 hover:border-emerald-500/40 shadow-xs"
+                    ? "border-white/10 bg-white/5"
+                    : "border-slate-200 bg-white shadow-xs"
                 }`}
               >
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
-                    isNight ? "bg-[#c5ff55] text-[#14170f]" : "bg-emerald-600 text-white"
+                    isDedicatedAdminView
+                      ? "bg-purple-600 text-white"
+                      : isNight
+                      ? "bg-[#c5ff55] text-[#14170f]"
+                      : "bg-emerald-600 text-white"
                   }`}
                 >
                   {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
@@ -251,10 +314,30 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                     }`}
                   >
                     {isAdmin ? <ShieldCheck size={10} /> : <UserCheck size={10} />}
-                    {role}
+                    {isAdmin ? "ADMINISTRATOR" : role}
                   </span>
                 </div>
-              </Link>
+              </div>
+
+              {/* Admin View Mode Switcher */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleAdminMode();
+                    if (isDedicatedAdminView) {
+                      navigate("/dashboard");
+                    } else {
+                      navigate("/admin");
+                    }
+                    onClose();
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-2 text-xs font-bold text-purple-300 transition hover:bg-purple-500/20"
+                >
+                  <ArrowRightLeft size={13} />
+                  {isDedicatedAdminView ? "Switch to Candidate View" : "Return to Admin Console"}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -300,7 +383,7 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
       >
         {/* Brand Header */}
         <Link
-          to="/"
+          to={isDedicatedAdminView ? "/admin" : "/"}
           className={`flex h-[72px] shrink-0 items-center border-b transition-all duration-300 ${
             isNight ? "border-white/10" : "border-slate-200"
           } ${isHovered ? "gap-3 px-5" : "justify-center px-2"}`}
@@ -315,10 +398,15 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
           {isHovered && (
             <div className="overflow-hidden whitespace-nowrap transition-opacity duration-300">
               <p className={`text-[15px] font-black tracking-[0.13em] ${isNight ? "text-white" : "text-slate-900"}`}>
-                KNIGHT<span className={isNight ? "text-[#c5ff55]" : "text-emerald-600"}>ZONE</span>
+                KNIGHT
+                <span className={isDedicatedAdminView ? "text-purple-400" : isNight ? "text-[#c5ff55]" : "text-emerald-600"}>
+                  {isDedicatedAdminView ? "ADMIN" : "ZONE"}
+                </span>
               </p>
-              <p className={`text-[9px] font-bold uppercase tracking-[0.19em] ${isNight ? "text-[#95a390]" : "text-slate-500"}`}>
-                Think. Solve. Compete.
+              <p className={`text-[9px] font-bold uppercase tracking-[0.19em] ${
+                isDedicatedAdminView ? "text-purple-300/80" : isNight ? "text-[#95a390]" : "text-slate-500"
+              }`}>
+                {isDedicatedAdminView ? "Enterprise Console" : "Think. Solve. Compete."}
               </p>
             </div>
           )}
@@ -332,7 +420,11 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                 {isHovered ? (
                   <p
                     className={`px-3 text-[10px] font-black font-mono uppercase tracking-[0.2em] whitespace-nowrap ${
-                      isNight ? "text-[#95a390]" : "text-slate-500"
+                      isDedicatedAdminView
+                        ? "text-purple-400/90"
+                        : isNight
+                        ? "text-[#95a390]"
+                        : "text-slate-500"
                     }`}
                   >
                     {group.label}
@@ -344,56 +436,57 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
                 <div className="mt-1.5 space-y-1">
                   {group.items.map((item) => {
                     const Icon = item.icon;
+                    const active = isItemActive(item.path);
 
                     return (
                       <NavLink
                         key={item.name}
                         to={item.path}
                         title={!isHovered ? item.name : undefined}
-                        className={({ isActive }) =>
-                          `flex items-center rounded-xl text-xs font-bold transition-all duration-200 ${
-                            isHovered
-                              ? `gap-3 px-3 py-2.5 ${
-                                  isActive
-                                    ? isNight
-                                      ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
-                                      : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
+                        className={`flex items-center rounded-xl text-xs font-bold transition-all duration-200 ${
+                          isHovered
+                            ? `gap-3 px-3 py-2.5 ${
+                                active
+                                  ? isDedicatedAdminView
+                                    ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20 font-bold"
                                     : isNight
-                                    ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
-                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                }`
-                              : `h-11 w-11 justify-center mx-auto ${
-                                  isActive
-                                    ? isNight
-                                      ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
-                                      : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
-                                    : isNight
-                                    ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
-                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                }`
-                          }`
-                        }
-                      >
-                        {({ isActive }) => (
-                          <>
-                            <Icon
-                              size={isHovered ? 17 : 19}
-                              className={`shrink-0 ${
-                                isActive
-                                  ? isNight
-                                    ? "text-[#c5ff55]"
-                                    : "text-white"
+                                    ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
+                                    : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
                                   : isNight
-                                  ? "text-[#c2cbbe]"
-                                  : "text-slate-500"
-                              }`}
-                            />
-                            {isHovered && (
-                              <span className="overflow-hidden whitespace-nowrap">
-                                {item.name}
-                              </span>
-                            )}
-                          </>
+                                  ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`
+                            : `h-11 w-11 justify-center mx-auto ${
+                                active
+                                  ? isDedicatedAdminView
+                                    ? "bg-purple-900/40 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/20 font-bold"
+                                    : isNight
+                                    ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30 shadow-sm shadow-[#c5ff55]/10 font-bold"
+                                    : "bg-emerald-600 text-white border border-emerald-600 shadow-md shadow-emerald-500/20 font-bold"
+                                  : isNight
+                                  ? "text-[#c2cbbe] hover:bg-white/10 hover:text-white"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`
+                        }`}
+                      >
+                        <Icon
+                          size={isHovered ? 17 : 19}
+                          className={`shrink-0 ${
+                            active
+                              ? isDedicatedAdminView
+                                ? "text-purple-300"
+                                : isNight
+                                ? "text-[#c5ff55]"
+                                : "text-white"
+                              : isNight
+                              ? "text-[#c2cbbe]"
+                              : "text-slate-500"
+                          }`}
+                        />
+                        {isHovered && (
+                          <span className="overflow-hidden whitespace-nowrap">
+                            {item.name}
+                          </span>
                         )}
                       </NavLink>
                     );
@@ -424,53 +517,100 @@ const Sidebar = ({ mobileOpen = false, onClose = () => {} }) => {
             }`}
           >
             {isHovered ? (
-              <Link
-                to="/profile"
-                className={`flex items-center gap-3 rounded-2xl border p-2.5 transition ${
-                  isNight
-                    ? "border-white/10 bg-white/5 hover:bg-white/10 hover:border-[#c5ff55]/40"
-                    : "border-slate-200 bg-white hover:bg-slate-100 hover:border-emerald-500/40 shadow-xs"
-                }`}
-              >
+              <div className="space-y-2">
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
-                    isNight ? "bg-[#c5ff55] text-[#14170f]" : "bg-emerald-600 text-white"
+                  className={`flex items-center gap-3 rounded-2xl border p-2.5 transition ${
+                    isNight
+                      ? "border-white/10 bg-white/5"
+                      : "border-slate-200 bg-white shadow-xs"
+                  }`}
+                >
+                  <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
+                      isDedicatedAdminView
+                        ? "bg-purple-600 text-white"
+                        : isNight
+                        ? "bg-[#c5ff55] text-[#14170f]"
+                        : "bg-emerald-600 text-white"
+                    }`}
+                  >
+                    {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
+                    <p className={`truncate text-xs font-bold ${isNight ? "text-white" : "text-slate-900"}`}>
+                      {user?.name || user?.email?.split("@")[0]}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span
+                        className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                          isAdmin
+                            ? isNight
+                              ? "bg-purple-900/40 text-purple-300 border border-purple-500/30"
+                              : "bg-purple-100 text-purple-700 border border-purple-200"
+                            : isNight
+                            ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30"
+                            : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        }`}
+                      >
+                        {isAdmin ? <ShieldCheck size={10} /> : <UserCheck size={10} />}
+                        {isAdmin ? "ADMINISTRATOR" : role}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin Mode Toggle */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleAdminMode();
+                      if (isDedicatedAdminView) {
+                        navigate("/dashboard");
+                      } else {
+                        navigate("/admin");
+                      }
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-1.5 px-2 text-[11px] font-bold text-purple-300 transition hover:bg-purple-500/20"
+                  >
+                    <ArrowRightLeft size={13} />
+                    <span>{isDedicatedAdminView ? "Switch to Candidate View" : "Return to Admin Console"}</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5">
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleAdminMode();
+                      if (isDedicatedAdminView) {
+                        navigate("/dashboard");
+                      } else {
+                        navigate("/admin");
+                      }
+                    }}
+                    title={isDedicatedAdminView ? "Switch to Candidate View" : "Return to Admin Console"}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition"
+                  >
+                    <ArrowRightLeft size={14} />
+                  </button>
+                )}
+
+                <div
+                  title={`${user?.name || "Knight"} (${isAdmin ? "ADMIN" : role})`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black transition shadow-sm ${
+                    isDedicatedAdminView
+                      ? "bg-purple-600 text-white"
+                      : isNight
+                      ? "bg-[#c5ff55] text-[#14170f]"
+                      : "bg-emerald-600 text-white"
                   }`}
                 >
                   {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
                 </div>
-                <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">
-                  <p className={`truncate text-xs font-bold ${isNight ? "text-white" : "text-slate-900"}`}>
-                    {user?.name || user?.email?.split("@")[0]}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
-                        isAdmin
-                          ? isNight
-                            ? "bg-purple-900/40 text-purple-300 border border-purple-500/30"
-                            : "bg-purple-100 text-purple-700 border border-purple-200"
-                          : isNight
-                          ? "bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30"
-                          : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                      }`}
-                    >
-                      {isAdmin ? <ShieldCheck size={10} /> : <UserCheck size={10} />}
-                      {role}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ) : (
-              <Link
-                to="/profile"
-                title={`${user?.name || "Knight"} (${role})`}
-                className={`flex h-11 w-11 items-center justify-center mx-auto rounded-xl text-xs font-black transition shadow-sm ${
-                  isNight ? "bg-[#c5ff55] text-[#14170f] hover:bg-[#d5ff83]" : "bg-emerald-600 text-white hover:bg-emerald-700"
-                }`}
-              >
-                {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
-              </Link>
+              </div>
             )}
           </div>
         ) : (

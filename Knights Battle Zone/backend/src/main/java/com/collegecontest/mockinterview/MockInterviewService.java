@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -207,6 +209,55 @@ public class MockInterviewService {
     public InterviewResponse requestPeerInterview(Long userId, String userName, InterviewRequest req) {
         req.setMode("PEER");
         return createSessionFromRequest(userId, userName, req);
+    }
+
+    @Transactional
+    public InterviewResponse joinPeerInterview(Long currentUserId, String currentUserName, String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("Session ID or Room Code is required");
+        }
+        Interview interview = interviewRepository.findBySessionId(sessionId.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Interview session not found with code: " + sessionId));
+
+        if (!Objects.equals(interview.getUserId(), currentUserId)) {
+            interview.setInterviewerId(currentUserId);
+            interview.setInterviewerName(currentUserName);
+        }
+        if ("SCHEDULED".equalsIgnoreCase(interview.getStatus())) {
+            interview.setStatus("IN_PROGRESS");
+        }
+        return toResponse(interviewRepository.save(interview));
+    }
+
+    @Transactional
+    public InterviewResponse findRandomPeerMatch(Long currentUserId, String currentUserName, String role, String difficulty) {
+        List<Interview> openList = interviewRepository.findByModeAndStatus("PEER", "SCHEDULED");
+        Optional<Interview> available = openList.stream()
+                .filter(i -> !Objects.equals(i.getUserId(), currentUserId) && i.getInterviewerId() == null)
+                .findFirst();
+
+        if (available.isPresent()) {
+            Interview matched = available.get();
+            matched.setInterviewerId(currentUserId);
+            matched.setInterviewerName(currentUserName);
+            matched.setStatus("IN_PROGRESS");
+            return toResponse(interviewRepository.save(matched));
+        }
+
+        Interview newQueue = Interview.builder()
+                .userId(currentUserId)
+                .userName(currentUserName)
+                .sessionId("KNIGHT-" + ThreadLocalRandom.current().nextInt(100000, 999999))
+                .scheduledTime(LocalDateTime.now())
+                .durationMinutes(45)
+                .interviewType(normalizeInterviewType(role))
+                .mode("PEER")
+                .difficulty(normalizeDifficulty(difficulty))
+                .topics(role != null ? role : "Full Stack & DSA")
+                .status("SCHEDULED")
+                .build();
+
+        return toResponse(interviewRepository.save(newQueue));
     }
 
     @Transactional

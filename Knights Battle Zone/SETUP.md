@@ -1,4 +1,4 @@
-﻿# Knights Battle Zone Complete Deployment Guide
+# Knights Battle Zone Complete Deployment Guide
 
 ## ðŸŽ¯ Architecture
 
@@ -138,7 +138,7 @@ Knights Battle Zone/
 â”‚   â”œâ”€â”€ Dockerfile              â† Backend build
 â”‚   â”œâ”€â”€ pom.xml
 â”‚   â””â”€â”€ src/
-â”œâ”€â”€ frontend/
+â”œâ”€â”€ frontend-new/
 â”‚   â”œâ”€â”€ Dockerfile              â† Frontend build
 â”‚   â”œâ”€â”€ nginx-render.conf       â† Render config (no proxy)
 â”‚   â”œâ”€â”€ nginx-docker.conf       â† Docker config (with proxy)

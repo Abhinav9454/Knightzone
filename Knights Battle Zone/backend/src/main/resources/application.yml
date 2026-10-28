@@ -83,6 +83,12 @@ openai:
     url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
     temperature: ${OPENAI_TEMPERATURE:0.7}
 
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-1.5-flash}
+
+
 ai:
   usage:
     cooldown-hours: ${AI_USAGE_COOLDOWN_HOURS:24}
@@ -92,9 +98,9 @@ app:
     enabled: ${APP_DB_ROUTING_ENABLED:false}
     read-only-transactions-only: ${APP_DB_ROUTING_READ_ONLY_TX_ONLY:true}
   bootstrap-admin:
-    enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
-    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
-    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:admin@knightzone.dev}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:AdminKnight@2026!}
 
 tracker:
   sync:

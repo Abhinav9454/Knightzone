@@ -123,7 +123,9 @@ public class SecurityConfig {
                                 "/health",
                                 "/actuator/health",
                                 "/error",
-                                "/ws/**")
+                                "/ws/**",
+                                "/chat",
+                                "/chat/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/problems/**",
@@ -137,8 +139,6 @@ public class SecurityConfig {
                                 "/inter-college/**",
                                 "/badges",
                                 "/badges/**",
-                                "/typing/texts/random",
-                                "/typing/leaderboard",
                                 "/clubs",
                                 "/clubs/**")
                         .permitAll()
@@ -148,6 +148,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .hasRole("ADMIN")
                         .requestMatchers("/actuator/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/admin/**")
                         .hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

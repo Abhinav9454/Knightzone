@@ -20,4 +20,5 @@ public class InterviewRequest {
     private String topics;
     private String meetingLink;
     private List<Long> problemIds;
+    private String inviteeToken;
 }

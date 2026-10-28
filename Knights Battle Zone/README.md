@@ -1,4 +1,4 @@
-﻿# Knights Battle Zone
+# Knights Battle Zone
 
 ## Overview
 
@@ -6,7 +6,7 @@ Knights Battle Zone is a full-stack college coding and career platform with a Re
 
 ## Project Structure
 
-- `frontend/`: React + TypeScript app built with Vite and Tailwind
+- `frontend-new/`: React app built with Vite and Tailwind
 - `backend/`: main Spring Boot API
 - `backend/judge-service/`: legacy judge source retained for embedded backend builds
 - `backend/resume-parser-service/`: optional legacy parser service source, not required for local Docker run
@@ -18,7 +18,7 @@ Knights Battle Zone is a full-stack college coding and career platform with a Re
 ## Core Flow
 
 1. `frontend` calls backend APIs under `/api`.
-2. `backend` handles auth, contests, quizzes, submissions, leaderboard, typing, placement, clubs, marketplace, and related modules.
+2. `backend` handles auth, contests, quizzes, submissions, leaderboard, placement, clubs, and related modules.
 3. Submission requests are executed by the backend's embedded judge runtime in Docker mode.
 4. Judge results are persisted back in backend and surfaced to users through API plus realtime updates.
 5. Placement workflows use local validation by default and can optionally call an external parser if configured.
@@ -29,8 +29,8 @@ Knights Battle Zone is a full-stack college coding and career platform with a Re
 - Placement features for students, companies, and TPO workflows
 - Resume parsing and placement dashboard support
 - Clubs, community, rankings, and engagement modules
-- Marketplace passage publishing, rating, bookmarking, and moderation
-- Typing, tracker, duel, quiz, and adaptive-learning style modules already present in backend/frontend code
+- Proctoring, anti-cheat 3-strike rules, and integrity detection
+- Tracker, duel, quiz, and adaptive-learning style modules already present in backend/frontend code
 
 ## Data and Infra
 
@@ -112,7 +112,6 @@ PowerShell:
 ```powershell
 ./backend/scripts/run-integration-tests.ps1 -Suite all
 ./backend/scripts/run-integration-tests.ps1 -Suite smoke
-./backend/scripts/run-integration-tests.ps1 -Suite marketplace
 ./backend/scripts/run-integration-tests.ps1 -Suite placement
 ./backend/scripts/run-integration-tests.ps1 -Suite stream
 ./backend/scripts/run-integration-tests.ps1 -Suite security
@@ -125,7 +124,6 @@ Bash:
 ```bash
 ./backend/scripts/run-integration-tests.sh all
 ./backend/scripts/run-integration-tests.sh smoke
-./backend/scripts/run-integration-tests.sh marketplace
 ./backend/scripts/run-integration-tests.sh placement
 ./backend/scripts/run-integration-tests.sh stream
 ./backend/scripts/run-integration-tests.sh security
@@ -189,12 +187,6 @@ npm run preview
 - Backend supports centralized error responses and rate limiting on selected flows.
 - Realtime updates use WebSocket/STOMP with reconnect and polling fallback behavior.
 
-## Marketplace Notes
-
-- APIs under `/api/passages/*`
-- Supports creation, discovery, rating, bookmarking, and moderation
-- Includes featured, trending, and new style discovery
-- Moderation workflow supports reporting and admin review
 
 ## Placement Notes
 

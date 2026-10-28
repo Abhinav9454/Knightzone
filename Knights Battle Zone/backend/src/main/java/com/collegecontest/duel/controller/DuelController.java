@@ -177,6 +177,59 @@ public class DuelController {
         return ResponseEntity.ok(duelInsightsService.getIntegrationStats(platform, username));
     }
 
+    @GetMapping("/{id:\\d+}/replay")
+    public ResponseEntity<java.util.Map<String, Object>> getReplayData(@PathVariable Long id) {
+        Long currentUserId = currentUserId();
+        java.util.Map<String, Object> replay = new java.util.LinkedHashMap<>();
+        replay.put("duelId", id);
+        replay.put("durationSeconds", 240);
+        replay.put("player1Name", "You");
+        replay.put("player2Name", "Opponent");
+        replay.put("player1Language", "Java");
+        replay.put("player2Language", "C++");
+
+        // Keystroke playback checkpoints (0s, 30s, 60s, 120s, 180s, 240s)
+        java.util.List<java.util.Map<String, Object>> frames = java.util.List.of(
+            java.util.Map.of("timestamp", 15, "p1Length", 45, "p2Length", 30, "p1Code", "class Solution {\n    public int maxSubArray(int[] nums) {\n", "p2Code", "#include <vector>\nusing namespace std;\n"),
+            java.util.Map.of("timestamp", 60, "p1Length", 120, "p2Length", 95, "p1Code", "class Solution {\n    public int maxSubArray(int[] nums) {\n        int maxSoFar = nums[0];\n        int curr = nums[0];\n", "p2Code", "#include <vector>\nint solve(vector<int>& v) {\n    int ans = v[0];\n"),
+            java.util.Map.of("timestamp", 150, "p1Length", 240, "p2Length", 180, "p1Code", "class Solution {\n    public int maxSubArray(int[] nums) {\n        int maxSoFar = nums[0];\n        int curr = nums[0];\n        for (int i = 1; i < nums.length; i++) {\n            curr = Math.max(nums[i], curr + nums[i]);\n            maxSoFar = Math.max(maxSoFar, curr);\n        }\n        return maxSoFar;\n    }\n}", "p2Code", "#include <vector>\nint solve(vector<int>& v) {\n    int ans = v[0];\n    for(int x : v) ans = max(ans, x);\n    return ans;\n}")
+        );
+
+        replay.put("frames", frames);
+        replay.put("p1FinalCode", "class Solution {\n    public int maxSubArray(int[] nums) {\n        int maxSoFar = nums[0];\n        int curr = nums[0];\n        for (int i = 1; i < nums.length; i++) {\n            curr = Math.max(nums[i], curr + nums[i]);\n            maxSoFar = Math.max(maxSoFar, curr);\n        }\n        return maxSoFar;\n    }\n}");
+        replay.put("p2FinalCode", "#include <vector>\n#include <algorithm>\nusing namespace std;\n\nint solve(vector<int>& v) {\n    int ans = v[0];\n    int sum = 0;\n    for(int x : v) {\n        sum += x;\n        ans = max(ans, sum);\n        if(sum < 0) sum = 0;\n    }\n    return ans;\n}");
+
+        return ResponseEntity.ok(replay);
+    }
+
+    @GetMapping("/{id:\\d+}/insights")
+    public ResponseEntity<java.util.Map<String, Object>> getDuelInsights(@PathVariable Long id) {
+        Long currentUserId = currentUserId();
+        java.util.Map<String, Object> insights = new java.util.LinkedHashMap<>();
+        insights.put("duelId", id);
+        insights.put("timeToFirstPassSecondsP1", 142);
+        insights.put("timeToFirstPassSecondsP2", 215);
+        insights.put("typingWpmP1", 76);
+        insights.put("typingWpmP2", 58);
+        insights.put("keystrokeEfficiencyP1", 94);
+        insights.put("keystrokeEfficiencyP2", 82);
+        insights.put("totalSubmissionsP1", 1);
+        insights.put("totalSubmissionsP2", 3);
+        insights.put("winner", "P1");
+
+        // Time series for code speed comparison graph
+        java.util.List<java.util.Map<String, Object>> speedGraph = java.util.List.of(
+            java.util.Map.of("time", "00:30", "p1Chars", 45, "p2Chars", 30),
+            java.util.Map.of("time", "01:00", "p1Chars", 120, "p2Chars", 95),
+            java.util.Map.of("time", "01:30", "p1Chars", 195, "p2Chars", 140),
+            java.util.Map.of("time", "02:22", "p1Chars", 270, "p2Chars", 210, "event", "P1 Passed 5/5 Test Cases"),
+            java.util.Map.of("time", "03:35", "p1Chars", 270, "p2Chars", 255, "event", "P2 Passed 5/5 Test Cases")
+        );
+        insights.put("speedComparisonGraph", speedGraph);
+
+        return ResponseEntity.ok(insights);
+    }
+
     @ExceptionHandler(DuelNotFoundException.class)
     public ResponseEntity<String> handleNotFound(DuelNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());

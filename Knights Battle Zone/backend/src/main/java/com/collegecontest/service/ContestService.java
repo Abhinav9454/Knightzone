@@ -128,6 +128,7 @@ public class ContestService {
         return dto;
     }
 
+    @Transactional
     public ContestDTO createContest(ContestDTO dto, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
@@ -167,6 +168,7 @@ public class ContestService {
         return convertToDTO(savedContest);
     }
 
+    @Transactional
     public ProblemDTO addProblemToContest(Long contestId, ProblemDTO dto) {
         Contest contest = contestRepository.findById(contestId)
                 .orElseThrow(() -> new RuntimeException("Contest not found with id: " + contestId));
@@ -198,6 +200,7 @@ public class ContestService {
         return pd;
     }
 
+    @Transactional
     public ContestDTO updateContest(Long contestId, ContestDTO dto, String userEmail) {
         Contest contest = contestRepository.findById(contestId)
                 .orElseThrow(() -> new RuntimeException("Contest not found with id: " + contestId));
@@ -369,16 +372,20 @@ public class ContestService {
         dto.setEndTime(contest.getEndTime());
         dto.setDurationMinutes(calculateContestDurationMinutes(contest));
         if (contest.getCreatedBy() != null) {
-            UserDTO u = new UserDTO();
-            u.setId(contest.getCreatedBy().getId());
-            u.setName(contest.getCreatedBy().getName());
-            u.setPublicUserId(contest.getCreatedBy().getPublicUserId());
-            u.setEmail(contest.getCreatedBy().getEmail());
-            u.setCollege(contest.getCreatedBy().getCollege());
-            u.setDepartment(contest.getCreatedBy().getDepartment());
-            u.setAdminExpiresAt(contest.getCreatedBy().getAdminExpiresAt());
-            u.setRole(contest.getCreatedBy().getRole() != null ? contest.getCreatedBy().getRole().toString() : null);
-            dto.setCreatedBy(u);
+            try {
+                UserDTO u = new UserDTO();
+                u.setId(contest.getCreatedBy().getId());
+                u.setName(contest.getCreatedBy().getName());
+                u.setPublicUserId(contest.getCreatedBy().getPublicUserId());
+                u.setEmail(contest.getCreatedBy().getEmail());
+                u.setCollege(contest.getCreatedBy().getCollege());
+                u.setDepartment(contest.getCreatedBy().getDepartment());
+                u.setAdminExpiresAt(contest.getCreatedBy().getAdminExpiresAt());
+                u.setRole(contest.getCreatedBy().getRole() != null ? contest.getCreatedBy().getRole().toString() : null);
+                dto.setCreatedBy(u);
+            } catch (Exception ignored) {
+                // Detached lazy proxy fallback
+            }
         }
         dto.setCreatedAt(contest.getCreatedAt());
         dto.setUpdatedAt(contest.getUpdatedAt());

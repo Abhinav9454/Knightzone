@@ -148,8 +148,6 @@ function check_module_apis() {
     results["API:Placement"]=2
     echo "[SKIP] API:Clubs - Skipped: no auth token"
     results["API:Clubs"]=2
-    echo "[SKIP] API:Marketplace - Skipped: no auth token"
-    results["API:Marketplace"]=2
     return
   fi
 
@@ -167,7 +165,6 @@ function check_module_apis() {
 
   _check_api_with_token "API:Placement" "http://localhost:$BACKEND_PORT/api/placement/jobs"
   _check_api_with_token "API:Clubs" "http://localhost:$BACKEND_PORT/api/clubs"
-  _check_api_with_token "API:Marketplace" "http://localhost:$BACKEND_PORT/api/passages?sort=new&page=0&size=5"
 }
 
 function check_judge_execute() {

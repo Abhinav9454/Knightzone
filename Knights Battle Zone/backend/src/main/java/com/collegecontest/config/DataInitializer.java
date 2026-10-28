@@ -986,22 +986,53 @@ public class DataInitializer implements CommandLineRunner {
             logger.warn("Skipping {} bootstrap for {}: password must be at least 12 characters.", role, email);
             return;
         }
-        if (userRepository.findByEmail(email).isPresent()) {
-            logger.info("{} account already exists: {}", role, email);
-            return;
+
+        String normalizedEmail = email.trim().toLowerCase();
+        java.util.Optional<User> existing = userRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            boolean updated = false;
+            if (user.getRole() != role) {
+                user.setRole(role);
+                updated = true;
+            }
+            if (!password.isBlank() && !passwordEncoder.matches(password, user.getPassword())) {
+                user.setPassword(passwordEncoder.encode(password));
+                updated = true;
+            }
+            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+                user.setEmailVerified(true);
+                updated = true;
+            }
+            if (updated) {
+                userRepository.save(user);
+                logger.info("Updated existing user {} to {} role and synchronized password.", normalizedEmail, role);
+            } else {
+                logger.info("{} account already exists with {} role: {}", role, role, normalizedEmail);
+            }
+        } else {
+            User user = new User();
+            user.setEmail(normalizedEmail);
+            user.setUsername(username != null && !username.isBlank() ? username : "admin");
+            user.setPublicUserId(userPublicIdService.generateUniquePublicUserId());
+            user.setPassword(passwordEncoder.encode(password));
+            user.setName(name != null && !name.isBlank() ? name : "Platform Admin");
+            user.setCollege(college != null && !college.isBlank() ? college : "Knightzone Command");
+            user.setRole(role);
+            user.setEmailVerified(true);
+            user.setCreatedAt(LocalDateTime.now());
+            userRepository.save(user);
+            logger.info("{} user created: {}", role, normalizedEmail);
         }
 
-        User user = new User();
-        user.setEmail(email);
-        user.setUsername(username);
-        user.setPublicUserId(userPublicIdService.generateUniquePublicUserId());
-        user.setPassword(passwordEncoder.encode(password));
-        user.setName(name);
-        user.setCollege(college);
-        user.setRole(role);
-        user.setCreatedAt(LocalDateTime.now());
-        userRepository.save(user);
-        logger.info("{} user created: {}", role, email);
+        // Strict isolation: Demote any other accounts with ADMIN role to USER
+        userRepository.findAll().forEach(u -> {
+            if (u.getRole() == Role.ADMIN && !u.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                u.setRole(Role.USER);
+                userRepository.save(u);
+                logger.warn("Demoted non-designated admin user {} to USER role.", u.getEmail());
+            }
+        });
     }
 }
 

@@ -7,7 +7,6 @@ import com.collegecontest.duel.repository.DuelFairPlayFlagRepository;
 import com.collegecontest.duel.repository.DuelRepository;
 import com.collegecontest.model.User;
 import com.collegecontest.repository.UserRepository;
-import com.collegecontest.typing.repository.TypingTestResultRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,18 +24,15 @@ public class DuelInsightsService {
     private final DuelRepository duelRepository;
     private final UserRepository userRepository;
     private final DuelFairPlayFlagRepository fairPlayFlagRepository;
-    private final TypingTestResultRepository typingTestResultRepository;
 
     public DuelInsightsService(
             DuelRepository duelRepository,
             UserRepository userRepository,
-            DuelFairPlayFlagRepository fairPlayFlagRepository,
-            TypingTestResultRepository typingTestResultRepository
+            DuelFairPlayFlagRepository fairPlayFlagRepository
     ) {
         this.duelRepository = duelRepository;
         this.userRepository = userRepository;
         this.fairPlayFlagRepository = fairPlayFlagRepository;
-        this.typingTestResultRepository = typingTestResultRepository;
     }
 
     @Transactional(readOnly = true)
@@ -247,14 +243,7 @@ public class DuelInsightsService {
             }
         }
 
-        List<PlatformAnalyticsDTO.PopularPassage> popularPassages = typingTestResultRepository
-                .findTopTextSnippets(PageRequest.of(0, 5))
-                .stream()
-                .map(row -> PlatformAnalyticsDTO.PopularPassage.builder()
-                        .snippet(cropSnippet(Objects.toString(row[0], "")))
-                        .uses(((Number) row[1]).longValue())
-                        .build())
-                .toList();
+        List<PlatformAnalyticsDTO.PopularPassage> popularPassages = List.of();
 
         List<PlatformAnalyticsDTO.DifficultyBucket> difficultyBuckets = difficultyDistribution.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
@@ -290,7 +279,7 @@ public class DuelInsightsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         UserDuelStats stats = computeUserStats(user.getId());
-        Integer bestWpm = typingTestResultRepository.findBestWpmByUserId(user.getId());
+        Integer bestWpm = 0;
 
         String baseProfileUrl = "/profile/" + user.getUsername();
         String widgetUrl = "/integrations/" + platform.toLowerCase(Locale.ROOT) + "/widget/" + user.getUsername();

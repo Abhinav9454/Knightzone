@@ -11,4 +11,5 @@ public interface InterviewRepository extends JpaRepository<Interview, Long> {
     List<Interview> findByUserId(Long userId);
     List<Interview> findByUserIdOrInterviewerId(Long userId, Long interviewerId);
     Optional<Interview> findBySessionId(String sessionId);
+    List<Interview> findByModeAndStatus(String mode, String status);
 }

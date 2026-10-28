@@ -93,10 +93,35 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  const designatedAdminEmail = (
+    import.meta.env.VITE_ADMIN_EMAIL || "admin@knightzone.dev"
+  ).toLowerCase().trim();
+
   const isAuthenticated = !!token;
   const currentRole = normalizeRole(user?.role);
-  const isAdmin = currentRole === "ADMIN";
-  const isUser = currentRole === "USER";
+  const isDesignatedAdminEmail =
+    !!user?.email && user.email.toLowerCase().trim() === designatedAdminEmail;
+  const isAdmin = currentRole === "ADMIN" || isDesignatedAdminEmail;
+  const isUser = !isAdmin;
+
+  // Admin Mode state (defaults to true for admins, allows toggling preview)
+  const [adminMode, setAdminModeState] = useState(() => {
+    const saved = localStorage.getItem("kbz_admin_mode");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const toggleAdminMode = () => {
+    setAdminModeState((prev) => {
+      const next = !prev;
+      localStorage.setItem("kbz_admin_mode", String(next));
+      return next;
+    });
+  };
+
+  const setAdminMode = (val) => {
+    setAdminModeState(val);
+    localStorage.setItem("kbz_admin_mode", String(val));
+  };
 
   return (
     <AuthContext.Provider
@@ -106,6 +131,9 @@ export const AuthProvider = ({ children }) => {
         role: currentRole,
         isAdmin,
         isUser,
+        adminMode: isAdmin && adminMode,
+        toggleAdminMode,
+        setAdminMode,
         isAuthenticated,
         loading,
         login,

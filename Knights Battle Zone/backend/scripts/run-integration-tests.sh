@@ -6,16 +6,16 @@ SKIP_DOCKER_CHECK="${SKIP_DOCKER_CHECK:-false}"
 SKIP_RESOURCES="${SKIP_RESOURCES:-false}"
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "Usage: ./backend/scripts/run-integration-tests.sh [all|smoke|core|clubs|marketplace|placement|stream|security]"
+  echo "Usage: ./backend/scripts/run-integration-tests.sh [all|smoke|core|clubs|placement|stream|security]"
   echo "Env flags: SKIP_DOCKER_CHECK=true SKIP_RESOURCES=true"
   exit 0
 fi
 
 case "$SUITE" in
-  all|smoke|core|clubs|marketplace|placement|stream|security) ;;
+  all|smoke|core|clubs|placement|stream|security) ;;
   *)
     echo "Invalid suite: $SUITE"
-    echo "Usage: ./backend/scripts/run-integration-tests.sh [all|smoke|core|clubs|marketplace|placement|stream|security]"
+    echo "Usage: ./backend/scripts/run-integration-tests.sh [all|smoke|core|clubs|placement|stream|security]"
     exit 1
     ;;
 esac
@@ -69,12 +69,11 @@ fi
 case "$SUITE" in
   core) TEST_SELECTOR="ControllerIntegrationTest" ;;
   clubs) TEST_SELECTOR="ClubIntegrationTest" ;;
-  marketplace) TEST_SELECTOR="MarketplaceIntegrationTest" ;;
   placement) TEST_SELECTOR="PlacementIntegrationTest" ;;
   stream) TEST_SELECTOR="StreamIntegrationTest" ;;
   security) TEST_SELECTOR="PlacementSecurityIntegrationTest" ;;
   smoke) TEST_SELECTOR="ControllerIntegrationTest,ClubIntegrationTest" ;;
-  *) TEST_SELECTOR="ControllerIntegrationTest,ClubIntegrationTest,MarketplaceIntegrationTest,PlacementIntegrationTest,StreamIntegrationTest,PlacementSecurityIntegrationTest" ;;
+  *) TEST_SELECTOR="ControllerIntegrationTest,ClubIntegrationTest,PlacementIntegrationTest,StreamIntegrationTest,PlacementSecurityIntegrationTest" ;;
 esac
 
 echo "Running integration suite: $SUITE"

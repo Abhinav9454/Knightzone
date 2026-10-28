@@ -7,16 +7,107 @@ import {
   Code2,
   Trophy,
   Users,
-  Keyboard,
   Briefcase,
   HelpCircle,
   LayoutDashboard,
   User,
   ArrowRight,
   Sparkles,
+  Video,
+  FileText,
+  ShieldCheck,
+  ShieldAlert,
+  GraduationCap,
+  GitPullRequest,
+  Bot,
+  LifeBuoy,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+
+const ADMIN_COMMAND_ITEMS = [
+  {
+    id: "admin-overview",
+    title: "Executive Overview & Metrics",
+    subtitle: "Real-time candidate registrations, active contests and server health",
+    category: "Admin Console",
+    icon: LayoutDashboard,
+    path: "/admin/overview",
+  },
+  {
+    id: "admin-contests",
+    title: "Contest Studio & Tournaments",
+    subtitle: "Create, edit, schedule, and attach problem sets to tournaments",
+    category: "Admin Console",
+    icon: Trophy,
+    path: "/admin/contests",
+  },
+  {
+    id: "admin-problems",
+    title: "Problem Bank & Testcase Lab",
+    subtitle: "Author coding challenges, testcases, limits and reference solutions",
+    category: "Admin Console",
+    icon: Code2,
+    path: "/admin/problems",
+  },
+  {
+    id: "admin-quizzes",
+    title: "Quiz Engine & MCQ Creator",
+    subtitle: "Configure timed technical aptitude assessments and questions",
+    category: "Admin Console",
+    icon: HelpCircle,
+    path: "/admin/quizzes",
+  },
+  {
+    id: "admin-anti-cheat",
+    title: "Anti-Cheat & Proctoring Hub",
+    subtitle: "Review flagged submissions, 3-strike audit logs and integrity reports",
+    category: "Integrity",
+    icon: ShieldAlert,
+    path: "/admin/anti-cheat",
+  },
+  {
+    id: "admin-users",
+    title: "Knights & Role Management",
+    subtitle: "Search registered users, assign roles, and handle account status",
+    category: "Operations",
+    icon: Users,
+    path: "/admin/users",
+  },
+  {
+    id: "admin-jobs",
+    title: "Career Drives & Job Postings",
+    subtitle: "Post recruitment listings, requirements, and candidate links",
+    category: "Operations",
+    icon: Briefcase,
+    path: "/admin/jobs",
+  },
+  {
+    id: "admin-support",
+    title: "Live Support Desk Queue",
+    subtitle: "Direct live assistance, candidate inquiries and organizer chat",
+    category: "Operations",
+    icon: LifeBuoy,
+    path: "/admin/support",
+  },
+];
 
 const COMMAND_ITEMS = [
+  {
+    id: "ai-chat",
+    title: "Knight AI Chatbot Companion",
+    subtitle: "24/7 intelligent coding, contest analysis & DSA assistance",
+    category: "AI & Support",
+    icon: Bot,
+    path: "/chat",
+  },
+  {
+    id: "live-support",
+    title: "Live Staff Support Desk",
+    subtitle: "Direct messaging with human organizers & contest judges",
+    category: "AI & Support",
+    icon: LifeBuoy,
+    path: "/live-chat",
+  },
   {
     id: "arena",
     title: "1v1 Battle Arena",
@@ -42,14 +133,6 @@ const COMMAND_ITEMS = [
     path: "/problems",
   },
   {
-    id: "typing",
-    title: "Speed Coding Test",
-    subtitle: "Benchmark typing velocity on JS, Python, and C++ syntax",
-    category: "Practice",
-    icon: Keyboard,
-    path: "/typing",
-  },
-  {
     id: "clubs",
     title: "Coding Clubs & Circles",
     subtitle: "Peer learning squads, curriculum roadmap, and doubts",
@@ -58,12 +141,52 @@ const COMMAND_ITEMS = [
     path: "/clubs",
   },
   {
+    id: "inter-college",
+    title: "Inter-College Battle Arena",
+    subtitle: "Campus vs Campus national collegiate coding leaderboard",
+    category: "Competitive Modes",
+    icon: GraduationCap,
+    path: "/inter-college",
+  },
+  {
+    id: "contributions",
+    title: "Community Contributions",
+    subtitle: "Author coding challenges, write editorials, and earn points",
+    category: "Community",
+    icon: GitPullRequest,
+    path: "/contributions",
+  },
+  {
     id: "leaderboard",
     title: "Global Leaderboard",
     subtitle: "National standings, ratings, and campus rankings",
     category: "Community",
     icon: Trophy,
     path: "/leaderboard",
+  },
+  {
+    id: "mock-interviews",
+    title: "Mock Interview Simulator",
+    subtitle: "AI Interviewer sparring & Peer-to-Peer live coding rounds",
+    category: "Career",
+    icon: Video,
+    path: "/mock-interviews",
+  },
+  {
+    id: "resume-builder",
+    title: "ATS Resume Builder",
+    subtitle: "Interactive resume creator with live ATS scoring & PDF export",
+    category: "Career",
+    icon: FileText,
+    path: "/resume-builder",
+  },
+  {
+    id: "resume-strength",
+    title: "ATS Score Diagnostic Lab",
+    subtitle: "Deep multi-parameter resume audit & Job Description matcher",
+    category: "Career",
+    icon: ShieldCheck,
+    path: "/resume-strength",
   },
   {
     id: "jobs",
@@ -104,9 +227,13 @@ export default function CommandPalette({ isOpen, onClose }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const { isAdmin, adminMode } = useAuth();
+
+  const isDedicatedAdmin = isAdmin && adminMode !== false;
+  const itemsPool = isDedicatedAdmin ? ADMIN_COMMAND_ITEMS : COMMAND_ITEMS;
 
   // Filter items
-  const filteredItems = COMMAND_ITEMS.filter((item) => {
+  const filteredItems = itemsPool.filter((item) => {
     const q = query.toLowerCase();
     return (
       item.title.toLowerCase().includes(q) ||

@@ -98,6 +98,35 @@ public class MockInterviewController {
         return ResponseEntity.ok(service.requestPeerInterview(currentUserId(), currentUserName(), req));
     }
 
+    @PostMapping("/interviews/peer/invite")
+    public ResponseEntity<InterviewResponse> invitePeerInterview(@RequestBody InterviewRequest req) {
+        Long currentUserId = currentUserId();
+        String currentUserName = currentUserName();
+        if (req.getInviteeToken() != null && !req.getInviteeToken().isBlank()) {
+            String token = req.getInviteeToken().trim();
+            userRepository.findByPublicUserId(token.toUpperCase())
+                    .or(() -> userRepository.findByUsername(token))
+                    .ifPresent(peer -> {
+                        req.setInterviewerId(peer.getId());
+                        req.setInterviewerName(peer.getName());
+                    });
+        }
+        req.setMode("PEER");
+        return ResponseEntity.ok(service.createSessionFromRequest(currentUserId, currentUserName, req));
+    }
+
+    @PostMapping("/interviews/peer/join")
+    public ResponseEntity<InterviewResponse> joinPeerSession(@RequestParam String sessionId) {
+        return ResponseEntity.ok(service.joinPeerInterview(currentUserId(), currentUserName(), sessionId));
+    }
+
+    @PostMapping("/interviews/peer/match")
+    public ResponseEntity<InterviewResponse> randomPeerMatch(
+            @RequestParam(required = false, defaultValue = "Full Stack Engineer") String role,
+            @RequestParam(required = false, defaultValue = "Intermediate") String difficulty) {
+        return ResponseEntity.ok(service.findRandomPeerMatch(currentUserId(), currentUserName(), role, difficulty));
+    }
+
     @PostMapping("/interviews/schedule")
     public ResponseEntity<InterviewResponse> scheduleExpertInterview(@RequestBody InterviewRequest req) {
         return ResponseEntity.ok(service.scheduleExpertInterview(currentUserId(), currentUserName(), req));

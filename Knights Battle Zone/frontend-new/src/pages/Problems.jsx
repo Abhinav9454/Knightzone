@@ -13,7 +13,7 @@ import {
   RotateCcw,
   Loader2,
 } from "lucide-react";
-import { problemsApi, submissionsApi } from "../services/api";
+import { problemsApi, submissionsApi, bookmarksApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 
@@ -133,6 +133,15 @@ export default function Problems() {
           }
         })
         .catch((e) => console.warn("Could not fetch my submissions for problem set:", e));
+
+      bookmarksApi
+        .getBookmarkedProblems()
+        .then((res) => {
+          if (res?.bookmarkedProblemIds) {
+            setBookmarks(res.bookmarkedProblemIds);
+          }
+        })
+        .catch(() => null);
     } else {
       setSolvedIds(new Set());
     }
@@ -234,6 +243,7 @@ export default function Problems() {
   };
 
   const toggleBookmark = (id) => {
+    bookmarksApi.toggle(id).catch(() => null);
     setBookmarks((current) => {
       const next = current.includes(id)
         ? current.filter((item) => item !== id)

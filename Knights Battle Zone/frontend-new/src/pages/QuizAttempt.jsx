@@ -34,6 +34,16 @@ export default function QuizAttempt() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Anti-Cheat Proctoring state
+  const [proctoringStarted, setProctoringStarted] = useState(false);
+  const [strikes, setStrikes] = useState(0); // 0 to 4
+  const [isDisqualified, setIsDisqualified] = useState(false);
+  const [disqualifiedReason, setDisqualifiedReason] = useState("");
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+  const [fullscreenError, setFullscreenError] = useState("");
+  const lastViolationTimeRef = useRef(0);
+
   // Quiz state
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({}); // { [questionId]: selectedOptionId }
@@ -52,8 +62,167 @@ export default function QuizAttempt() {
     loadQuiz();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      exitFullscreenSafely();
     };
   }, [id, isAuthenticated]);
+
+  // Anti-cheat event listeners active when proctoring has started
+  useEffect(() => {
+    if (!proctoringStarted || result || isDisqualified || isSubmitting) return;
+
+    const handleSecurityViolation = (reason) => {
+      const now = Date.now();
+      // Throttle violations to avoid multi-triggering from single tab switch
+      if (now - lastViolationTimeRef.current < 1500) return;
+      lastViolationTimeRef.current = now;
+
+      setStrikes((prev) => {
+        const nextStrikes = prev + 1;
+        if (nextStrikes > 3) {
+          handleDisqualify("Disqualified: You exited fullscreen or switched tabs more than 3 times.");
+        } else {
+          setWarningMessage(reason);
+          setShowWarningModal(true);
+        }
+        return nextStrikes;
+      });
+    };
+
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        handleSecurityViolation("Exited fullscreen mode.");
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        handleSecurityViolation("Switched browser tab or minimized window.");
+      }
+    };
+
+    const onWindowBlur = () => {
+      handleSecurityViolation("Switched away from assessment window.");
+    };
+
+    const onKeyDown = (e) => {
+      // Block F12
+      if (e.key === "F12" || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Block Ctrl+Shift+I / J / C (DevTools)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Block Ctrl+U (View Source)
+      if ((e.ctrlKey || e.metaKey) && (e.key === "u" || e.key === "U")) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    const onContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("blur", onWindowBlur);
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("contextmenu", onContextMenu);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("contextmenu", onContextMenu);
+    };
+  }, [proctoringStarted, result, isDisqualified, isSubmitting]);
+
+  const exitFullscreenSafely = () => {
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const startProctoredQuiz = async () => {
+    setFullscreenError("");
+    try {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        await elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        await elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        await elem.msRequestFullscreen();
+      }
+      setProctoringStarted(true);
+      startCountdownTimer();
+    } catch (err) {
+      console.warn("Fullscreen request error:", err);
+      setFullscreenError("Fullscreen permission was blocked or denied. Please grant fullscreen access to enter the assessment.");
+    }
+  };
+
+  const resumeFullscreenFromWarning = async () => {
+    setShowWarningModal(false);
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // proceed anyway
+    }
+  };
+
+  const handleDisqualify = (reason) => {
+    setIsDisqualified(true);
+    setDisqualifiedReason(reason);
+    if (timerRef.current) clearInterval(timerRef.current);
+    exitFullscreenSafely();
+
+    // Record disqualified attempt to localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem("kbz_quiz_attempts") || "[]");
+      const record = {
+        id: Date.now(),
+        quizId: quiz?.id,
+        quizTitle: quiz?.title || "Live Assessment",
+        score: 0,
+        totalPoints: (quiz?.questions?.length || 5) * 10,
+        submittedAt: new Date().toISOString(),
+        disqualified: true,
+        reason,
+      };
+      localStorage.setItem("kbz_quiz_attempts", JSON.stringify([record, ...stored]));
+    } catch (e) {
+      console.warn("Error saving disqualified attempt:", e);
+    }
+  };
+
+  const startCountdownTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          handleAutoSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const loadQuiz = async () => {
     try {
@@ -96,18 +265,6 @@ export default function QuizAttempt() {
     setQuiz(quizObj);
     const durationSecs = (quizObj.durationMinutes || 15) * 60;
     setTimeLeft(durationSecs);
-
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
 
   const handleSelectOption = (questionId, optionId) => {
@@ -201,6 +358,7 @@ export default function QuizAttempt() {
         console.warn("LocalStorage save error:", localErr);
       }
 
+      exitFullscreenSafely();
       setResult(submissionResult);
       setShowConfirmModal(false);
     } finally {
@@ -242,6 +400,114 @@ export default function QuizAttempt() {
           >
             Back to All Quizzes
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== DISQUALIFIED SCREEN ====================
+  if (isDisqualified) {
+    return (
+      <div className="min-h-screen bg-[#0c0f0a] text-[#e0e4dc] flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-3xl border border-rose-500/30 bg-[#161a14] p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 mb-4 shadow-lg shadow-rose-500/10">
+            <XCircle size={44} />
+          </div>
+          <span className="inline-block rounded-full bg-rose-500/20 border border-rose-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider text-rose-300 mb-2">
+            Disqualified by Anti-Cheat Guard
+          </span>
+          <h2 className="text-2xl font-black text-white">Assessment Terminated</h2>
+          <p className="text-xs text-rose-300/90 mt-2 mb-4 leading-relaxed font-semibold">
+            {disqualifiedReason || "You exceeded the maximum allowed limit of 3 tab-switches or fullscreen exits."}
+          </p>
+
+          <div className="my-5 rounded-2xl bg-black/40 border border-white/10 p-4 text-xs space-y-2 text-[#aab1a1] text-left">
+            <div className="flex justify-between">
+              <span>Assessment:</span>
+              <strong className="text-white">{quiz.title}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Security Violations:</span>
+              <strong className="text-rose-400 font-mono">{strikes} / 3 allowed (Exceeded)</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Questions Answered:</span>
+              <strong className="text-white">{Object.keys(answers).length} / {quiz.questions?.length || 0}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Final Recorded Score:</span>
+              <strong className="text-rose-400 font-mono">0 Points (Disqualified)</strong>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate("/quizzes")}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/15 px-5 py-3 text-xs font-black uppercase transition"
+          >
+            <ArrowLeft size={14} />
+            Return to Quizzes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== FULLSCREEN PROCTORING ENTRY GATE ====================
+  if (!proctoringStarted && !result) {
+    return (
+      <div className="min-h-screen bg-[#0c0f0a] flex items-center justify-center p-4">
+        <div className="w-full max-w-lg rounded-3xl border border-[#c5ff55]/30 bg-[#161a14] p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-[#c5ff55]/10 border border-[#c5ff55]/30 text-[#c5ff55] shadow-lg mb-4">
+            <ShieldCheck size={40} />
+          </div>
+          <span className="inline-block rounded-full bg-[#c5ff55]/15 border border-[#c5ff55]/30 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#c5ff55] mb-2">
+            Knight Anti-Cheat Proctoring Protocol
+          </span>
+          <h2 className="text-2xl font-black text-white">{quiz.title}</h2>
+          <p className="text-xs text-[#aab1a1] mt-2 mb-6 leading-relaxed">
+            This live assessment requires mandatory full-screen proctoring and active tab-switch monitoring to guarantee competitive integrity.
+          </p>
+
+          <div className="space-y-2.5 text-left bg-black/40 border border-white/10 rounded-2xl p-4 mb-6 text-xs text-[#d0d6c9]">
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#c5ff55]/20 text-[#c5ff55] font-black text-[10px]">1</span>
+              <span><strong>Mandatory Fullscreen:</strong> You must enter and stay in fullscreen mode throughout the test.</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-amber-300 font-black text-[10px]">2</span>
+              <span><strong>Max 3 Violations:</strong> Exiting fullscreen or switching browser tabs/windows triggers a security strike. <strong>More than 3 violations (&gt;3) will instantly disqualify you</strong>.</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-300 font-black text-[10px]">3</span>
+              <span><strong>DevTools &amp; Shortcuts Locked:</strong> F12, developer inspect shortcuts, and right-click context menu are disabled.</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-300 font-black text-[10px]">4</span>
+              <span><strong>Score &amp; Answers:</strong> Upon finishing or time expiration, your final score and attempt review will be displayed and fullscreen will be released.</span>
+            </div>
+          </div>
+
+          {fullscreenError && (
+            <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300 font-semibold">
+              ⚠️ {fullscreenError}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => navigate("/quizzes")}
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-white hover:bg-white/10 transition"
+            >
+              Cancel &amp; Go Back
+            </button>
+            <button
+              onClick={startProctoredQuiz}
+              className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-[#c5ff55] px-6 py-3 text-xs font-black uppercase text-[#14170f] hover:bg-[#d5ff83] transition shadow-lg shadow-[#c5ff55]/25"
+            >
+              <Zap size={15} />
+              Allow Full Screen &amp; Begin
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -472,7 +738,24 @@ export default function QuizAttempt() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Anti-Cheat Strike Indicator */}
+            <div
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black border transition ${
+                strikes === 0
+                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                  : strikes <= 2
+                  ? "bg-amber-400/20 text-amber-300 border-amber-400/40 animate-pulse"
+                  : "bg-rose-500/25 text-rose-300 border-rose-500/50 animate-bounce"
+              }`}
+              title="Anti-cheat violation monitor. Max 3 warnings allowed."
+            >
+              <ShieldCheck size={14} className={strikes > 0 ? "text-amber-400" : "text-emerald-400"} />
+              <span>
+                {strikes === 0 ? "GUARD ACTIVE" : `STRIKES: ${strikes}/3`}
+              </span>
+            </div>
+
             {/* Timer Pill */}
             <div
               className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-black shadow-sm ${
@@ -657,6 +940,38 @@ export default function QuizAttempt() {
                 {isSubmitting ? "Scoring..." : "Confirm & Submit"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* SECURITY WARNING MODAL */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-amber-400/40 bg-[#161a14] p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-400/15 border border-amber-400/30 text-amber-300 mb-3 shadow-lg shadow-amber-400/10">
+              <AlertTriangle size={34} />
+            </div>
+            <span className="inline-block rounded-full bg-amber-400/20 border border-amber-400/30 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-amber-300 mb-2">
+              Security Strike {strikes} of 3
+            </span>
+            <h3 className="text-xl font-black text-white">Tab Switch / Fullscreen Exit Detected</h3>
+            <p className="text-xs text-[#d0d6c9] mt-2 mb-4 leading-relaxed">
+              {warningMessage || "You left fullscreen mode or switched away from this assessment window."}
+              <br />
+              <strong className="text-rose-400 mt-2 block font-bold">
+                {3 - strikes > 0
+                  ? `⚠️ You have ${3 - strikes} warning(s) remaining! If you exit again, you will be permanently disqualified.`
+                  : `🚨 FINAL WARNING REACHED! One more violation and you will be immediately removed and scored 0.`}
+              </strong>
+            </p>
+
+            <button
+              onClick={resumeFullscreenFromWarning}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#c5ff55] px-6 py-3 text-xs font-black uppercase text-[#14170f] hover:bg-[#d5ff83] transition shadow-md shadow-[#c5ff55]/20"
+            >
+              <Zap size={14} />
+              Resume Fullscreen &amp; Continue Test
+            </button>
           </div>
         </div>
       )}

@@ -193,37 +193,49 @@ public class QuizService {
         dto.setEndTime(quiz.getEndTime());
         dto.setDurationMinutes(quiz.getDurationMinutes());
         if (quiz.getCreatedBy() != null) {
-            UserDTO createdBy = new UserDTO();
-            createdBy.setId(quiz.getCreatedBy().getId());
-            createdBy.setName(quiz.getCreatedBy().getName());
-            createdBy.setUsername(quiz.getCreatedBy().getUsername());
-            createdBy.setPublicUserId(quiz.getCreatedBy().getPublicUserId());
-            createdBy.setEmail(quiz.getCreatedBy().getEmail());
-            createdBy.setRole(
-                    quiz.getCreatedBy().getRole() != null ? quiz.getCreatedBy().getRole().toString() : null);
-            createdBy.setCollege(quiz.getCreatedBy().getCollege());
-            createdBy.setDepartment(quiz.getCreatedBy().getDepartment());
-            dto.setCreatedBy(createdBy);
+            try {
+                UserDTO createdBy = new UserDTO();
+                createdBy.setId(quiz.getCreatedBy().getId());
+                createdBy.setName(quiz.getCreatedBy().getName());
+                createdBy.setUsername(quiz.getCreatedBy().getUsername());
+                createdBy.setPublicUserId(quiz.getCreatedBy().getPublicUserId());
+                createdBy.setEmail(quiz.getCreatedBy().getEmail());
+                createdBy.setRole(
+                        quiz.getCreatedBy().getRole() != null ? quiz.getCreatedBy().getRole().toString() : null);
+                createdBy.setCollege(quiz.getCreatedBy().getCollege());
+                createdBy.setDepartment(quiz.getCreatedBy().getDepartment());
+                dto.setCreatedBy(createdBy);
+            } catch (Exception ignored) {
+                // Detached lazy proxy fallback
+            }
         }
         dto.setCreatedAt(quiz.getCreatedAt());
         dto.setUpdatedAt(quiz.getUpdatedAt());
         if (quiz.getQuestions() != null) {
-            dto.setQuestions(quiz.getQuestions().stream().map(q -> {
-                QuestionDTO qdto = new QuestionDTO();
-                qdto.setId(q.getId());
-                qdto.setText(q.getText());
-                qdto.setPoints(q.getPoints());
-                if (q.getOptions() != null) {
-                    qdto.setOptions(q.getOptions().stream().map(o -> {
-                        OptionDTO odto = new OptionDTO();
-                        odto.setId(o.getId());
-                        odto.setText(o.getText());
-                        odto.setIsCorrect(o.getIsCorrect());
-                        return odto;
-                    }).toList());
-                }
-                return qdto;
-            }).toList());
+            try {
+                dto.setQuestions(quiz.getQuestions().stream().map(q -> {
+                    QuestionDTO qdto = new QuestionDTO();
+                    qdto.setId(q.getId());
+                    qdto.setText(q.getText());
+                    qdto.setPoints(q.getPoints());
+                    if (q.getOptions() != null) {
+                        try {
+                            qdto.setOptions(q.getOptions().stream().map(o -> {
+                                OptionDTO odto = new OptionDTO();
+                                odto.setId(o.getId());
+                                odto.setText(o.getText());
+                                odto.setIsCorrect(o.getIsCorrect());
+                                return odto;
+                            }).toList());
+                        } catch (Exception ignored) {
+                            // Detached options fallback
+                        }
+                    }
+                    return qdto;
+                }).toList());
+            } catch (Exception ignored) {
+                // Detached questions fallback
+            }
         }
         return dto;
     }

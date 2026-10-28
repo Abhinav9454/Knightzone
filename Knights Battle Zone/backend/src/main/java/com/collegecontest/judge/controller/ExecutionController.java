@@ -21,7 +21,7 @@ public class ExecutionController {
         this.dockerExecutionServiceProvider = dockerExecutionServiceProvider;
     }
 
-    @PostMapping("/execute")
+    @PostMapping({"/execute", "/judge/run-custom"})
     public ResponseEntity<Map<String, Object>> execute(@RequestBody Map<String, Object> payload) {
         DockerExecutionService dockerExecutionService = dockerExecutionServiceProvider.getIfAvailable();
         if (dockerExecutionService == null) {

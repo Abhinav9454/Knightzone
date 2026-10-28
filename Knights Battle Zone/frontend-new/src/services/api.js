@@ -202,6 +202,16 @@ export const duelsApi = {
     const response = await API.post(`/duels/${id}/decline`);
     return response.data;
   },
+
+  getReplay: async (duelId) => {
+    const response = await API.get(`/duels/${duelId}/replay`);
+    return response.data;
+  },
+
+  getInsights: async (duelId) => {
+    const response = await API.get(`/duels/${duelId}/insights`);
+    return response.data;
+  },
 };
 
 export const aiApi = {
@@ -250,6 +260,88 @@ export const resumeApi = {
     const response = await API.post("/resume/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    return response.data;
+  },
+
+  parseText: async (text) => {
+    const response = await API.post("/resume/parse", { text });
+    return response.data;
+  },
+};
+
+export const mockInterviewApi = {
+  getInterviews: async (params = {}) => {
+    const response = await API.get("/interviews", { params });
+    return response.data;
+  },
+
+  getInterview: async (id) => {
+    const response = await API.get(`/interviews/${id}`);
+    return response.data;
+  },
+
+  startAi: async (data) => {
+    const response = await API.post("/interviews/ai", data);
+    return response.data;
+  },
+
+  submitAiAnswer: async (data) => {
+    const response = await API.post("/interviews/ai/submit", data);
+    return response.data;
+  },
+
+  requestPeer: async (data) => {
+    const response = await API.post("/interviews/peer", data);
+    return response.data;
+  },
+
+  invitePeer: async (data) => {
+    const response = await API.post("/interviews/peer/invite", data);
+    return response.data;
+  },
+
+  randomPeerMatch: async (params = {}) => {
+    const response = await API.post("/interviews/peer/match", null, { params });
+    return response.data;
+  },
+
+  joinPeerSession: async (sessionId) => {
+    const response = await API.post("/interviews/peer/join", null, { params: { sessionId } });
+    return response.data;
+  },
+
+  getSession: async (sessionId) => {
+    const response = await API.get(`/interviews/session/${sessionId}`);
+    return response.data;
+  },
+
+  schedule: async (data) => {
+    const response = await API.post("/interviews/schedule", data);
+    return response.data;
+  },
+
+  addFeedback: async (id, data) => {
+    const response = await API.put(`/interviews/${id}/feedback`, data);
+    return response.data;
+  },
+
+  cancel: async (id) => {
+    const response = await API.delete(`/interviews/${id}`);
+    return response.data;
+  },
+
+  getQuestions: async (params = {}) => {
+    const response = await API.get("/questions", { params });
+    return response.data;
+  },
+
+  getMasteryProgress: async () => {
+    const response = await API.get("/interviews/mastery/progress");
+    return response.data;
+  },
+
+  getUserAnalytics: async (userId) => {
+    const response = await API.get(`/analytics/user/${userId}`);
     return response.data;
   },
 };
@@ -317,6 +409,32 @@ export const adminApi = {
 
   dismissReviewFlag: async (id) => {
     const response = await API.post(`/review-flags/${id}/dismiss`);
+    return response.data;
+  },
+
+  // Plagiarism & Code Similarity
+  scanContestPlagiarism: async (contestId) => {
+    const response = await API.post(`/admin/plagiarism/check/${contestId}`);
+    return response.data;
+  },
+
+  getPlagiarismFlags: async () => {
+    const response = await API.get("/admin/plagiarism/flags");
+    return response.data;
+  },
+
+  getContestPlagiarismFlags: async (contestId) => {
+    const response = await API.get(`/admin/plagiarism/contest/${contestId}`);
+    return response.data;
+  },
+
+  resolvePlagiarismFlag: async (flagId, resolution = "RESOLVED") => {
+    const response = await API.post(`/admin/plagiarism/resolve/${flagId}`, { resolution });
+    return response.data;
+  },
+
+  getPlagiarismComparison: async (flagId) => {
+    const response = await API.get(`/admin/plagiarism/comparison/${flagId}`);
     return response.data;
   },
 
@@ -532,28 +650,6 @@ export const clubsApi = {
   },
 };
 
-export const typingApi = {
-  getRandomText: async (params = {}) => {
-    const response = await API.get("/typing/texts/random", { params });
-    return response.data;
-  },
-
-  submitResult: async (result) => {
-    const response = await API.post("/typing/score", result);
-    return response.data;
-  },
-
-  getLeaderboard: async (params = {}) => {
-    const response = await API.get("/typing/leaderboard", { params });
-    return response.data;
-  },
-
-  getProfile: async () => {
-    const response = await API.get("/typing/profile");
-    return response.data;
-  },
-};
-
 export const jobsApi = {
   getAll: async () => {
     const response = await API.get("/placement/jobs");
@@ -579,6 +675,16 @@ export const jobsApi = {
 export const profileApi = {
   getMe: async () => {
     const response = await API.get("/users/me");
+    return response.data;
+  },
+
+  getUserByToken: async (token) => {
+    const response = await API.get(`/users/by-token/${encodeURIComponent(token)}`);
+    return response.data;
+  },
+
+  getPeers: async () => {
+    const response = await API.get("/users/peers");
     return response.data;
   },
 
@@ -631,8 +737,246 @@ export const notificationsApi = {
     return response.data;
   },
 
+  getNotifications: async (userId) => {
+    const response = await API.get("/placement/notifications", { params: { userId } });
+    return response.data;
+  },
+
   getUnreadCount: async (userId) => {
     const response = await API.get("/placement/notifications/unread-count", { params: { userId } });
+    return response.data;
+  },
+};
+
+export const interCollegeApi = {
+  getCurrentRankings: async () => {
+    const response = await API.get("/inter-college/rankings/current");
+    return response.data;
+  },
+
+  getColleges: async () => {
+    const response = await API.get("/inter-college/colleges");
+    return response.data;
+  },
+};
+
+export const contributionsApi = {
+  getLeaderboard: async (limit = 10) => {
+    const response = await API.get("/contributions/leaderboard", { params: { limit } });
+    return response.data;
+  },
+
+  getTypes: async () => {
+    const response = await API.get("/contributions/types");
+    return response.data;
+  },
+
+  getUserSummary: async (userId) => {
+    const response = await API.get(`/contributions/users/${userId}/summary`);
+    return response.data;
+  },
+
+  getUserHistory: async (userId, limit = 40) => {
+    const response = await API.get(`/contributions/users/${userId}/history`, { params: { limit } });
+    return response.data;
+  },
+
+  addContribution: async (data) => {
+    const response = await API.post("/contributions", data);
+    return response.data;
+  },
+};
+
+export const chatApi = {
+  sendMessage: async ({ message, sessionId }) => {
+    const response = await API.post("/chat", { message, sessionId });
+    return response.data;
+  },
+
+  getHistory: async (sessionId) => {
+    const response = await API.get("/chat/history", { params: { sessionId } });
+    return response.data;
+  },
+
+  sendFeedback: async ({ sessionId, rating, comment }) => {
+    const response = await API.post("/chat/feedback", { sessionId, rating, comment });
+    return response.data;
+  },
+};
+
+export const liveChatApi = {
+  createConversation: async ({ priority = "NORMAL", category = "GENERAL_QUERY", summary = "", sourcePage = "" } = {}) => {
+    const response = await API.post("/live-chat/conversations", {
+      priority,
+      category,
+      summary,
+      sourcePage,
+    });
+    return response.data;
+  },
+
+  getMyConversations: async () => {
+    const response = await API.get("/live-chat/conversations/my");
+    return response.data;
+  },
+
+  getConversation: async (conversationId) => {
+    const response = await API.get(`/live-chat/conversations/${conversationId}`);
+    return response.data;
+  },
+
+  getMessages: async (conversationId) => {
+    const response = await API.get(`/live-chat/conversations/${conversationId}/messages`);
+    return response.data;
+  },
+
+  sendMessage: async (conversationId, { message, messageType = "TEXT" }) => {
+    const response = await API.post(`/live-chat/conversations/${conversationId}/messages`, {
+      message,
+      messageType,
+    });
+    return response.data;
+  },
+
+  closeConversation: async (conversationId) => {
+    const response = await API.post(`/live-chat/conversations/${conversationId}/close`);
+    return response.data;
+  },
+
+  submitFeedback: async (conversationId, { rating, feedback = "" }) => {
+    const response = await API.post(`/live-chat/conversations/${conversationId}/feedback`, {
+      rating,
+      feedback,
+    });
+    return response.data;
+  },
+
+  getQueue: async () => {
+    const response = await API.get("/live-chat/conversations/queue");
+    return response.data;
+  },
+
+  assignConversation: async (conversationId) => {
+    const response = await API.post(`/live-chat/conversations/${conversationId}/assign`);
+    return response.data;
+  },
+};
+
+export const proctoringApi = {
+  logTabSwitch: async (contestId, userId) => {
+    const response = await API.post(`/contests/${contestId}/tab-switch`, null, {
+      params: { userId },
+    });
+    return response.data;
+  },
+
+  getTabSwitchCount: async (contestId, userId) => {
+    const response = await API.get(`/contests/${contestId}/tab-switch-count`, {
+      params: { userId },
+    });
+    return response.data;
+  },
+
+  logEvent: async (eventData) => {
+    const response = await API.post("/proctoring/events", eventData);
+    return response.data;
+  },
+
+  getViolations: async (contestId) => {
+    const response = await API.get(`/proctoring/contest/${contestId}/violations`);
+    return response.data;
+  },
+};
+
+export const customJudgeApi = {
+  executeCustom: async ({ language, code, input, timeLimitSeconds = 5, memoryMb = 256 }) => {
+    const response = await API.post("/judge/run-custom", {
+      language,
+      code,
+      input,
+      timeLimitSeconds,
+      memoryMb,
+    });
+    return response.data;
+  },
+};
+
+
+export const streaksApi = {
+  getMy: async () => {
+    const response = await API.get("/streaks/my");
+    return response.data;
+  },
+
+  activateFreeze: async () => {
+    const response = await API.post("/streaks/freeze");
+    return response.data;
+  },
+
+  getLeaderboard: async (limit = 10) => {
+    const response = await API.get("/streaks/leaderboard", { params: { limit } });
+    return response.data;
+  },
+};
+
+export const discussionsApi = {
+  getByProblem: async (problemId) => {
+    const response = await API.get(`/discussions/problem/${problemId}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await API.post("/discussions", data);
+    return response.data;
+  },
+
+  vote: async (id, delta = 1) => {
+    const response = await API.post(`/discussions/${id}/vote`, { delta });
+    return response.data;
+  },
+};
+
+export const bookmarksApi = {
+  getBookmarkedProblems: async () => {
+    const response = await API.get("/bookmarks/problems");
+    return response.data;
+  },
+
+  toggle: async (problemId) => {
+    const response = await API.post(`/bookmarks/toggle/${problemId}`);
+    return response.data;
+  },
+};
+
+export const auditLogsApi = {
+  getLogs: async ({ search, action } = {}) => {
+    const response = await API.get("/audit-logs", { params: { search, action } });
+    return response.data;
+  },
+
+  exportCsvUrl: () => "/api/audit-logs/export",
+};
+
+export const systemConfigApi = {
+  getConfig: async () => {
+    const response = await API.get("/admin/config");
+    return response.data;
+  },
+
+  updateConfig: async (updates) => {
+    const response = await API.post("/admin/config/maintenance", updates);
+    return response.data;
+  },
+};
+
+export const certificatesApi = {
+  generate: async (contestId) => {
+    const response = await API.post(`/certificates/generate/${contestId}`);
+    return response.data;
+  },
+
+  verify: async (uuid) => {
+    const response = await API.get(`/certificates/verify/${uuid}`);
     return response.data;
   },
 };

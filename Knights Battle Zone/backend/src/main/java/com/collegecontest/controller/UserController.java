@@ -77,6 +77,18 @@ public class UserController {
         return toPublicProfileDto(user);
     }
 
+    @GetMapping("/by-token/{token}")
+    public UserDTO getPublicProfileByToken(@PathVariable String token) {
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token is required");
+        }
+        String clean = token.trim();
+        User user = userRepository.findByPublicUserId(clean.toUpperCase())
+                .or(() -> userRepository.findByUsername(clean))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Knight not found with token: " + token));
+        return toPublicProfileDto(user);
+    }
+
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public UserDTO getMyProfile() {

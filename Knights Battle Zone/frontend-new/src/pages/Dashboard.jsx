@@ -15,15 +15,17 @@ import {
   Loader2,
   HelpCircle,
   Users,
-  Keyboard,
+  Video,
   Briefcase,
   Check,
   Zap,
   Sparkles,
+  Shield,
+  Award,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { dashboardApi, placementApi, contestsApi } from "../services/api";
+import { dashboardApi, placementApi, contestsApi, streaksApi } from "../services/api";
 import { RankBadge, TrophyIllustration } from "../components/svg";
 
 const DEFAULT_TOPICS = [
@@ -37,7 +39,7 @@ const DEFAULT_TOPICS = [
 const INITIAL_GOALS = [
   { id: "solve_prob", label: "Solve at least 1 algorithmic problem" },
   { id: "medium_hard", label: "Attempt a Medium or Hard problem" },
-  { id: "typing_test", label: "Test typing velocity in Speed Typing" },
+  { id: "mock_session", label: "Practice technical mock interview simulation" },
   { id: "arena_duel", label: "Compete in a 1v1 Battle Arena duel" },
 ];
 
@@ -48,6 +50,12 @@ export default function DashboardPage() {
   const [topics, setTopics] = useState(DEFAULT_TOPICS);
   const [upcomingContests, setUpcomingContests] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Daily Coding Streak & Freeze Shield state (Feature 3)
+  const [streakData, setStreakData] = useState(null);
+  const [activatingFreeze, setActivatingFreeze] = useState(false);
+  const [freezeMessage, setFreezeMessage] = useState("");
+  const [hoveredDay, setHoveredDay] = useState(null);
 
   // Daily goals stored in localStorage for today
   const todayKey = `kbz_goals_${new Date().toISOString().slice(0, 10)}`;
@@ -68,8 +76,9 @@ export default function DashboardPage() {
       dashboardApi.getSummary(),
       placementApi.getReadiness(),
       contestsApi.getAll(0, 6),
+      streaksApi.getMy(),
     ])
-      .then(([summaryRes, readinessRes, contestsRes]) => {
+      .then(([summaryRes, readinessRes, contestsRes, streakRes]) => {
         if (!isMounted) return;
 
         // 1. Dashboard summary
@@ -98,7 +107,7 @@ export default function DashboardPage() {
         if (contestsRes.status === "fulfilled" && contestsRes.value) {
           const list = Array.isArray(contestsRes.value)
             ? contestsRes.value
-            : contestsRes.value.content || [];
+            : contestsRes.value?.content || [];
           const now = new Date();
           const upcoming = list
             .filter((c) => {
@@ -117,6 +126,11 @@ export default function DashboardPage() {
               };
             });
           setUpcomingContests(upcoming);
+        }
+
+        // 4. Daily Coding Streak & Heatmap data
+        if (streakRes.status === "fulfilled" && streakRes.value) {
+          setStreakData(streakRes.value);
         }
       })
       .catch((err) => {
@@ -143,6 +157,24 @@ export default function DashboardPage() {
       }
       return next;
     });
+  };
+
+  const handleActivateFreeze = async () => {
+    try {
+      setActivatingFreeze(true);
+      const res = await streaksApi.activateFreeze();
+      setFreezeMessage(res.message || "Streak freeze shield activated!");
+      setStreakData((prev) => ({
+        ...prev,
+        freezeCount: res.remainingFreezes ?? Math.max(0, (prev?.freezeCount || 1) - 1),
+        freezeActiveToday: true,
+      }));
+    } catch (err) {
+      setFreezeMessage(err.response?.data?.message || "Failed to activate streak freeze.");
+    } finally {
+      setActivatingFreeze(false);
+      setTimeout(() => setFreezeMessage(""), 4000);
+    }
   };
 
   const displayName = user?.name || user?.email?.split("@")[0] || "Knight";
@@ -300,6 +332,162 @@ export default function DashboardPage() {
           })}
         </section>
 
+        {/* Daily Coding Streaks, Freeze Shield Vault & 365-Day Contribution Heatmap (Feature 3) */}
+        <section className="mt-6 rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
+          {/* Top Row: Streak stats, Freeze inventory, Milestones */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-white/10 pb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/20 via-orange-500/20 to-red-500/20 border border-orange-500/40 text-orange-400 shadow-lg shadow-orange-500/10">
+                <Flame size={32} className="animate-pulse" />
+                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-[11px] font-black text-black">
+                  🔥
+                </span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-black text-white">
+                    {streakData?.currentStreak ?? 14}-Day Coding Streak
+                  </h2>
+                  <span className="rounded-full bg-orange-500/15 border border-orange-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase text-orange-400">
+                    Active Streak
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-[#aab1a1]">
+                  Personal Best: <strong className="text-white">{streakData?.longestStreak ?? 28} Days</strong> • Today's Mission:{" "}
+                  <span className="font-bold text-[#c5ff55]">
+                    {streakData?.todayCompleted ? "Completed ✅" : "Pending ⏳"}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Streak Freeze Shield Vault */}
+            <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-black/40 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                  <Shield size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">
+                    {streakData?.freezeCount ?? 2} Freeze Shields
+                  </p>
+                  <p className="text-[11px] text-[#788071]">
+                    {streakData?.freezeActiveToday ? "Shield active today 🛡️" : "Protects against missed days"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleActivateFreeze}
+                disabled={activatingFreeze || streakData?.freezeActiveToday || (streakData?.freezeCount ?? 2) <= 0}
+                className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 px-4 py-2 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm shadow-cyan-500/10"
+              >
+                {activatingFreeze ? (
+                  <Loader2 size={13} className="animate-spin inline mr-1" />
+                ) : null}
+                {streakData?.freezeActiveToday ? "Shield Active Today" : "Activate Freeze"}
+              </button>
+            </div>
+          </div>
+
+          {freezeMessage && (
+            <div className="mt-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 text-xs text-cyan-200 flex items-center justify-between">
+              <span>{freezeMessage}</span>
+            </div>
+          )}
+
+          {/* GitHub-Style 365-Day Activity Heatmap Grid */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#788071]">
+                  Contribution Heatmap (Past 365 Days)
+                </h3>
+                <p className="text-xs text-[#aab1a1] mt-0.5">
+                  Visual proof of consistency, daily algorithm practice, and test submissions
+                </p>
+              </div>
+
+              {hoveredDay && (
+                <div className="rounded-lg border border-white/15 bg-black/90 px-3 py-1 font-mono text-[11px] text-white">
+                  <span className="text-[#c5ff55] font-bold">{hoveredDay.count} problem{hoveredDay.count !== 1 ? "s" : ""}</span> on {hoveredDay.date}
+                </div>
+              )}
+            </div>
+
+            {/* The 52-week horizontal grid */}
+            <div className="overflow-x-auto pb-2">
+              <div className="inline-grid grid-rows-7 grid-flow-col gap-1.5 p-1 min-w-[780px]">
+                {(streakData?.activityHeatmap || []).map((day, idx) => {
+                  const level = day.level || 0;
+                  const bgClass =
+                    level === 4
+                      ? "bg-[#c5ff55] shadow-sm shadow-[#c5ff55]/50 border border-white/40"
+                      : level === 3
+                      ? "bg-emerald-500 border border-emerald-400/40"
+                      : level === 2
+                      ? "bg-emerald-700/80 border border-emerald-600/30"
+                      : level === 1
+                      ? "bg-emerald-950/80 border border-emerald-900/40"
+                      : "bg-white/[0.04] border border-white/[0.04]";
+
+                  return (
+                    <div
+                      key={day.date || idx}
+                      onMouseEnter={() => setHoveredDay(day)}
+                      onMouseLeave={() => setHoveredDay(null)}
+                      title={`${day.date}: ${day.count} solved`}
+                      className={`h-3 w-3 rounded-[3px] transition-transform hover:scale-125 cursor-pointer ${bgClass}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Heatmap Legend */}
+            <div className="mt-3 flex flex-wrap items-center justify-between text-[11px] text-[#788071] border-t border-white/5 pt-3">
+              <span>Annual Activity Record • 365 Days Verified</span>
+              <div className="flex items-center gap-1.5 font-medium">
+                <span>Less</span>
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-white/[0.04] border border-white/10" />
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-emerald-950 border border-emerald-900" />
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-emerald-700 border border-emerald-600" />
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-emerald-500 border border-emerald-400" />
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-[#c5ff55] shadow-sm shadow-[#c5ff55]/40" />
+                <span>More</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Streak Milestones Grid */}
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#788071] mb-3">
+              Streak Solving Milestones & XP Rewards
+            </h4>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {(streakData?.milestones || []).map((m) => (
+                <div
+                  key={m.days}
+                  className={`rounded-2xl border p-3.5 transition ${
+                    m.achieved
+                      ? "border-[#c5ff55]/40 bg-[#c5ff55]/[0.05] shadow-sm shadow-[#c5ff55]/5"
+                      : "border-white/5 bg-black/20 opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-white">{m.days} Days</span>
+                    <span className={`text-[10px] font-black uppercase ${m.achieved ? "text-[#c5ff55]" : "text-[#788071]"}`}>
+                      {m.achieved ? "Unlocked" : "Locked"}
+                    </span>
+                  </div>
+                  <h5 className="mt-1.5 text-xs font-bold text-white">{m.title}</h5>
+                  <p className="mt-1 text-[10px] text-[#788071]">{m.reward}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Quick Access Modules Navigation */}
         <section className="mt-6 rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-sm">
           <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
@@ -368,12 +556,12 @@ export default function DashboardPage() {
             </Link>
 
             <Link
-              to="/typing"
+              to="/mock-interviews"
               className="group flex flex-col justify-between rounded-2xl border border-white/10 bg-[#121610] p-4 transition hover:border-[#c5ff55]/40 hover:bg-[#161a14]"
             >
               <div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#c5ff55] mb-3 group-hover:scale-105 transition">
-                  <Keyboard size={20} />
+                  <Video size={20} />
                 </div>
                 <h3
                   className={`text-sm font-bold transition ${
@@ -382,14 +570,14 @@ export default function DashboardPage() {
                       : "text-slate-900 group-hover:text-emerald-700"
                   }`}
                 >
-                  Speed Typing
+                  Mock Interviews
                 </h3>
                 <p className="text-xs text-[#aab1a1] mt-1 line-clamp-2">
-                  High-velocity keystroke benchmarks on real programming snippets.
+                  AI & Peer-to-peer technical mock interview simulator with live code editor.
                 </p>
               </div>
               <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#c5ff55]">
-                Start Test <ArrowRight size={13} />
+                Launch Studio <ArrowRight size={13} />
               </span>
             </Link>
 

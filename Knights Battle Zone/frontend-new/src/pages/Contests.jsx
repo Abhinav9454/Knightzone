@@ -17,15 +17,15 @@ import {
   Flame,
   CheckCircle2,
 } from "lucide-react";
-import { contestsApi } from "../services/api";
+import { contestsApi, adminApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { TrophyIllustration, KnightCrest } from "../components/svg";
 
-const TABS = ["Live & Upcoming", "Past Contests", "My Contests"];
+const TABS = ["Live & Upcoming", "Past Contests", "All Contests", "My Contests"];
 
 export default function Contests() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const { isNight } = useTheme();
   const [activeTab, setActiveTab] = useState("Live & Upcoming");
   const [contests, setContests] = useState([]);
@@ -150,11 +150,35 @@ export default function Contests() {
     if (activeTab === "Past Contests") {
       return c.status === "Completed";
     }
+    if (activeTab === "All Contests") {
+      return true;
+    }
     if (activeTab === "My Contests") {
       return registeredContestIds.has(c.id);
     }
     return true;
   });
+
+  const handleAdminMakeLive = async (contestId, durationMins = 120) => {
+    try {
+      const contest = contests.find((c) => c.id === contestId);
+      const now = new Date();
+      const startTime = new Date(now.getTime() - 60000).toISOString();
+      const endTime = new Date(now.getTime() + durationMins * 60000).toISOString();
+      await adminApi.updateContest(contestId, {
+        title: contest?.name || "Contest Championship",
+        description: contest?.description || "",
+        startTime,
+        endTime,
+        durationMinutes: durationMins,
+      });
+      alert(`⚡ Contest revived! Now actively LIVE for ${durationMins} minutes.`);
+      await loadContests();
+      setActiveTab("Live & Upcoming");
+    } catch (err) {
+      alert("Failed to make contest live: " + (err.response?.data?.message || err.message));
+    }
+  };
 
   const liveCount = contests.filter((c) => c.status === "Live").length;
   const upcomingCount = contests.filter((c) => c.status === "Upcoming").length;
@@ -215,6 +239,8 @@ export default function Contests() {
                     ? liveCount + upcomingCount
                     : tab === "Past Contests"
                     ? pastCount
+                    : tab === "All Contests"
+                    ? contests.length
                     : registeredContestIds.size;
 
                 return (
@@ -376,6 +402,29 @@ export default function Contests() {
                           ? "Registration is open"
                           : "Official scoreboard final"}
                       </span>
+
+                      {/* Admin Quick Make Live Action on Completed Contests */}
+                      {isAdmin && c.status === "Completed" && (
+                        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 w-full justify-start lg:justify-end">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                            <Zap size={11} className="text-[#c5ff55]" /> Admin:
+                          </span>
+                          <button
+                            onClick={() => handleAdminMakeLive(c.id, 60)}
+                            className="rounded-lg bg-[#c5ff55] px-2 py-0.5 text-[10px] font-black text-[#14170f] hover:bg-[#d5ff83] transition"
+                            title="Make contest live for 1 hour"
+                          >
+                            ⚡ Live +1h
+                          </button>
+                          <button
+                            onClick={() => handleAdminMakeLive(c.id, 120)}
+                            className="rounded-lg bg-[#c5ff55] px-2 py-0.5 text-[10px] font-black text-[#14170f] hover:bg-[#d5ff83] transition"
+                            title="Make contest live for 2 hours"
+                          >
+                            ⚡ Live +2h
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </article>

@@ -100,6 +100,9 @@ body,
 .light-mode [class*="bg-[#121610]"],
 .light-mode [class*="bg-[#11140f]"],
 .light-mode [class*="bg-[#141812]"],
+.light-mode [class*="bg-[#121a12]"],
+.light-mode [class*="bg-[#131611]"],
+.light-mode [class*="bg-[#181d14]"],
 .light-mode aside {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
@@ -108,7 +111,8 @@ body,
 .light-mode [class*="bg-[#161a14]"],
 .light-mode [class*="bg-[#181a16]"],
 .light-mode [class*="bg-[#181c16]"],
-.light-mode [class*="bg-[#14170f]"] {
+.light-mode [class*="bg-[#14170f]"],
+.light-mode [class*="bg-[#131610]"] {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
@@ -116,6 +120,34 @@ body,
 
 .light-mode [class*="bg-[#1c221a]"] {
   background-color: #f1f5f0 !important;
+}
+
+/* Translucent black surfaces in day mode become soft slate/gray */
+.light-mode [class*="bg-black/40"],
+.light-mode [class*="bg-black/50"],
+.light-mode [class*="bg-black/60"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode [class*="bg-black/20"],
+.light-mode [class*="bg-black/30"] {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Inputs, Textareas and Selects in daylight mode */
+.light-mode input,
+.light-mode textarea,
+.light-mode select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-mode input::placeholder,
+.light-mode textarea::placeholder {
+  color: #94a3b8 !important;
 }
 
 /* Clear dark linear gradients in day mode */
@@ -263,6 +295,71 @@ body,
 .light-mode td[class*="text-white"],
 .light-mode td [class*="text-white"] {
   color: #0f172a !important;
+}
+
+/* White with opacity text in Day Mode */
+.light-mode [class*="text-white/"] {
+  color: #64748b !important;
+}
+
+/* Preserve crisp white text on solid CTA buttons in Day Mode */
+.light-mode button[class*="bg-rose-"],
+.light-mode button[class*="bg-emerald-"],
+.light-mode button[class*="bg-purple-"],
+.light-mode button[class*="bg-blue-"],
+.light-mode button[class*="bg-indigo-"],
+.light-mode [class*="bg-rose-600"],
+.light-mode [class*="bg-rose-600"] *,
+.light-mode [class*="bg-emerald-600"],
+.light-mode [class*="bg-emerald-600"] *,
+.light-mode [class*="bg-purple-600"],
+.light-mode [class*="bg-purple-600"] *,
+.light-mode [class*="bg-blue-600"],
+.light-mode [class*="bg-blue-600"] * {
+  color: #ffffff !important;
+}
+
+/* Dark tint badges in Day Mode -> Soft pastel chips */
+.light-mode [class*="bg-emerald-950"],
+.light-mode [class*="bg-emerald-900"] {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #047857 !important;
+}
+
+.light-mode [class*="bg-purple-950"],
+.light-mode [class*="bg-purple-900"] {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+  color: #7e22ce !important;
+}
+
+.light-mode [class*="bg-rose-950"],
+.light-mode [class*="bg-rose-900"] {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+  color: #be123c !important;
+}
+
+.light-mode [class*="bg-amber-950"],
+.light-mode [class*="bg-amber-900"] {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #b45309 !important;
+}
+
+.light-mode [class*="bg-blue-950"],
+.light-mode [class*="bg-blue-900"] {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #1d4ed8 !important;
+}
+
+/* Clean shadows in Day Mode */
+.light-mode [class*="shadow-emerald-950"],
+.light-mode [class*="shadow-rose-950"],
+.light-mode [class*="shadow-purple-950"] {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* NIGHT MODE (Default Dark Theme): ALL green text -> PURE WHITE (#ffffff) */

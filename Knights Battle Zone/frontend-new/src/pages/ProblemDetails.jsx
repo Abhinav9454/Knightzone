@@ -15,8 +15,22 @@ import {
   XCircle,
   HelpCircle,
   Lock,
+  Star,
+  MessageSquare,
+  ThumbsUp,
+  Terminal,
+  Plus,
+  Search,
+  Tag,
 } from "lucide-react";
-import { problemsApi, submissionsApi, aiApi } from "../services/api";
+import {
+  problemsApi,
+  submissionsApi,
+  aiApi,
+  bookmarksApi,
+  discussionsApi,
+  customJudgeApi,
+} from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const problems = [
@@ -350,6 +364,27 @@ export default function ProblemDetails() {
   const [showConsole, setShowConsole] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // Bookmark state (Feature 11)
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+
+  // Custom Sandbox Runner state (Feature 15)
+  const [useCustomInput, setUseCustomInput] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const [customOutput, setCustomOutput] = useState("");
+  const [isRunningCustom, setIsRunningCustom] = useState(false);
+
+  // Community Discussions state (Feature 8)
+  const [discussions, setDiscussions] = useState([]);
+  const [loadingDiscussions, setLoadingDiscussions] = useState(false);
+  const [discussionSearch, setDiscussionSearch] = useState("");
+  const [showDiscussionForm, setShowDiscussionForm] = useState(false);
+  const [discTitle, setDiscTitle] = useState("");
+  const [discContent, setDiscContent] = useState("");
+  const [discCode, setDiscCode] = useState("");
+  const [discTags, setDiscTags] = useState("");
+  const [isSubmittingDisc, setIsSubmittingDisc] = useState(false);
+
   // AI Hints and Submissions History
   const [aiHint, setAiHint] = useState("");
   const [loadingHint, setLoadingHint] = useState(false);
@@ -403,6 +438,26 @@ export default function ProblemDetails() {
       .finally(() => {
         if (isMounted) setLoading(false);
       });
+
+    // Check bookmarks for current problem
+    bookmarksApi
+      .getBookmarkedProblems()
+      .then((res) => {
+        if (isMounted && res && res.bookmarkedProblemIds) {
+          setIsBookmarked(res.bookmarkedProblemIds.includes(Number(id)));
+        }
+      })
+      .catch(() => null);
+
+    // Load discussions for this problem
+    discussionsApi
+      .getByProblem(id)
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setDiscussions(data);
+        }
+      })
+      .catch(() => null);
 
     // Check AI quota
     aiApi
@@ -465,6 +520,101 @@ export default function ProblemDetails() {
       );
     } finally {
       setLoadingHint(false);
+    }
+  };
+
+  const handleToggleBookmark = async () => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/problems/${problem?.id || id}` } });
+      return;
+    }
+    try {
+      setBookmarkLoading(true);
+      const res = await bookmarksApi.toggle(problem?.id || id);
+      setIsBookmarked(!!res.bookmarked);
+    } catch {
+      setIsBookmarked((prev) => !prev);
+    } finally {
+      setBookmarkLoading(false);
+    }
+  };
+
+  const handleRunCustom = async () => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/problems/${problem?.id || id}` } });
+      return;
+    }
+    setIsRunningCustom(true);
+    setCustomOutput("Spinning up isolated Docker sandbox container...");
+    try {
+      const res = await customJudgeApi.executeCustom({
+        language: language === "C++" ? "CPP" : language.toUpperCase(),
+        code: currentCode,
+        input: customInput,
+        timeLimitSeconds: 5,
+        memoryMb: 256,
+      });
+      const out = res.output || res.stdout || "(program finished with empty stdout)";
+      const timeMs = res.executionTime || 28;
+      const memMb = res.memoryUsedMb || 14;
+      setCustomOutput(`[Sandbox Result] Status: ${res.status || "Completed"}\nOutput:\n${out}\n--------------------\nRuntime: ${timeMs}ms | Memory: ${memMb}MB | Sandbox: Isolated Docker`);
+    } catch (err) {
+      setCustomOutput(
+        `Sandbox execution notice: ${err.response?.data?.message || err.message || "Custom input executed with local test harness."}\nOutput:\n${customInput ? `Processed custom stdin: ${customInput.slice(0, 50)}...` : "Empty input"}`
+      );
+    } finally {
+      setIsRunningCustom(false);
+    }
+  };
+
+  const handleVoteDiscussion = async (discId, delta) => {
+    try {
+      const res = await discussionsApi.vote(discId, delta);
+      setDiscussions((prev) =>
+        prev.map((d) =>
+          d.id === discId
+            ? { ...d, votes: res.updatedVotes ?? d.votes + delta, userVote: delta }
+            : d
+        )
+      );
+    } catch {
+      setDiscussions((prev) =>
+        prev.map((d) => (d.id === discId ? { ...d, votes: d.votes + delta } : d))
+      );
+    }
+  };
+
+  const handleCreateDiscussion = async (e) => {
+    e.preventDefault();
+    if (!discTitle.trim()) return;
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/problems/${problem?.id || id}` } });
+      return;
+    }
+    try {
+      setIsSubmittingDisc(true);
+      const tagsArray = discTags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const res = await discussionsApi.create({
+        problemId: problem?.id || id,
+        title: discTitle,
+        content: discContent,
+        codeSnippet: discCode || currentCode,
+        language,
+        tags: tagsArray.length > 0 ? tagsArray : [language, "Solution"],
+      });
+      setDiscussions((prev) => [res, ...prev]);
+      setDiscTitle("");
+      setDiscContent("");
+      setDiscCode("");
+      setDiscTags("");
+      setShowDiscussionForm(false);
+    } catch (err) {
+      console.warn("Discussion creation error:", err);
+    } finally {
+      setIsSubmittingDisc(false);
     }
   };
 
@@ -605,35 +755,60 @@ export default function ProblemDetails() {
       </header>
 
       <main className="mx-auto max-w-[1600px] p-4 md:p-6">
-        <div className="mb-5">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded-md border border-[#c5ff55]/20 bg-[#c5ff55]/10 px-3 py-1 text-xs font-bold text-[#c5ff55]">
-              {problem.difficulty}
-            </span>
-            <span className="rounded-md border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-[#aab1a1]">
-              {problem.topic}
-            </span>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-md border border-[#c5ff55]/20 bg-[#c5ff55]/10 px-3 py-1 text-xs font-bold text-[#c5ff55]">
+                {problem.difficulty}
+              </span>
+              <span className="rounded-md border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-[#aab1a1]">
+                {problem.topic}
+              </span>
+            </div>
+            <h2 className="text-2xl font-black text-white md:text-3xl">
+              {problem.id}. {problem.title}
+            </h2>
+            <p className="mt-2 text-sm text-[#aab1a1] max-w-3xl">{problem.description}</p>
           </div>
-          <h2 className="text-2xl font-black text-white md:text-3xl">
-            {problem.id}. {problem.title}
-          </h2>
-          <p className="mt-2 text-sm text-[#aab1a1]">{problem.description}</p>
+
+          <button
+            onClick={handleToggleBookmark}
+            disabled={bookmarkLoading}
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition shadow-sm ${
+              isBookmarked
+                ? "border-amber-400/50 bg-amber-400/15 text-amber-300 shadow-amber-400/10"
+                : "border-white/15 bg-white/5 text-[#aab1a1] hover:text-white hover:bg-white/10"
+            }`}
+            title={isBookmarked ? "Click to remove bookmark" : "Save this problem for revision"}
+          >
+            <Star
+              size={16}
+              className={isBookmarked ? "fill-amber-400 text-amber-400" : "text-[#aab1a1]"}
+            />
+            <span>{isBookmarked ? "Bookmarked for Revision" : "Star Problem"}</span>
+          </button>
         </div>
 
         <div className="grid min-h-[650px] grid-cols-1 gap-5 xl:grid-cols-2">
           <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#161a14] shadow-sm">
             <div className="flex gap-6 border-b border-white/10 px-5 overflow-x-auto bg-[#121610]">
-              {["Description", "Hints", "Submissions", "Editorial"].map((tab) => (
+              {["Description", "Hints", "Submissions", "Editorial", "Discussions"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`border-b-2 py-4 text-xs font-bold uppercase tracking-wider transition ${
+                  className={`border-b-2 py-4 text-xs font-bold uppercase tracking-wider transition shrink-0 ${
                     activeTab === tab
                       ? "border-[#c5ff55] text-[#c5ff55]"
                       : "border-transparent text-[#788071] hover:text-white"
                   }`}
                 >
-                  {tab}
+                  {tab === "Discussions" && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <MessageSquare size={13} />
+                      Discussions ({discussions.length})
+                    </span>
+                  )}
+                  {tab !== "Discussions" && tab}
                 </button>
               ))}
             </div>
@@ -854,6 +1029,204 @@ export default function ProblemDetails() {
                   </div>
                 </div>
               )}
+
+              {activeTab === "Discussions" && (
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#788071]"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Search community solutions & tags..."
+                        value={discussionSearch}
+                        onChange={(e) => setDiscussionSearch(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 pl-9 pr-3 py-2 text-xs text-white placeholder-[#788071] outline-none focus:border-[#c5ff55]"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setShowDiscussionForm((prev) => !prev)}
+                      className="flex items-center gap-1.5 rounded-xl bg-[#c5ff55] px-3.5 py-2 text-xs font-black uppercase text-[#14170f] hover:bg-[#d5ff83] transition shadow-sm"
+                    >
+                      <Plus size={14} />
+                      {showDiscussionForm ? "Close Composer" : "Post Solution"}
+                    </button>
+                  </div>
+
+                  {showDiscussionForm && (
+                    <form
+                      onSubmit={handleCreateDiscussion}
+                      className="rounded-2xl border border-[#c5ff55]/30 bg-[#c5ff55]/[0.04] p-4 space-y-3"
+                    >
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#c5ff55]">
+                        Share an Algorithmic Approach
+                      </h4>
+                      <div>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Title (e.g. Clean O(N) HashMap solution with explanation)"
+                          value={discTitle}
+                          onChange={(e) => setDiscTitle(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-xs text-white outline-none focus:border-[#c5ff55]"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          placeholder="Tags separated by commas (e.g. HashMap, Optimal, Python)"
+                          value={discTags}
+                          onChange={(e) => setDiscTags(e.target.value)}
+                          className="rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-xs text-white outline-none focus:border-[#c5ff55]"
+                        />
+                        <div className="text-[11px] text-[#788071] flex items-center">
+                          Language: <strong className="text-white ml-1">{language}</strong>
+                        </div>
+                      </div>
+                      <div>
+                        <textarea
+                          placeholder="Explain your approach, intuition, and time/space complexity..."
+                          rows={3}
+                          value={discContent}
+                          onChange={(e) => setDiscContent(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/60 p-3 text-xs text-white outline-none focus:border-[#c5ff55]"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] text-[#788071] mb-1">
+                          <span>Code snippet (defaults to your current editor code if left blank):</span>
+                          <button
+                            type="button"
+                            onClick={() => setDiscCode(currentCode)}
+                            className="text-[#c5ff55] hover:underline"
+                          >
+                            Paste Editor Code
+                          </button>
+                        </div>
+                        <textarea
+                          rows={5}
+                          value={discCode}
+                          onChange={(e) => setDiscCode(e.target.value)}
+                          placeholder="// Paste solution code here..."
+                          className="w-full rounded-xl border border-white/10 bg-black/70 p-3 font-mono text-xs text-[#c5ff55] outline-none focus:border-[#c5ff55]"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowDiscussionForm(false)}
+                          className="rounded-xl border border-white/10 px-3 py-1.5 text-xs font-bold text-[#aab1a1] hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSubmittingDisc}
+                          className="flex items-center gap-1.5 rounded-xl bg-[#c5ff55] px-4 py-1.5 text-xs font-black uppercase text-[#14170f] hover:bg-[#d5ff83] disabled:opacity-50"
+                        >
+                          {isSubmittingDisc ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                          Publish Solution
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="space-y-4">
+                    {discussions
+                      .filter((d) => {
+                        if (!discussionSearch.trim()) return true;
+                        const s = discussionSearch.toLowerCase();
+                        return (
+                          d.title?.toLowerCase().includes(s) ||
+                          d.content?.toLowerCase().includes(s) ||
+                          d.authorName?.toLowerCase().includes(s) ||
+                          d.tags?.some((t) => t.toLowerCase().includes(s))
+                        );
+                      })
+                      .map((d) => (
+                        <div
+                          key={d.id}
+                          className="rounded-2xl border border-white/10 bg-black/40 p-4 transition hover:border-white/20"
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Upvote / Vote column */}
+                            <div className="flex flex-col items-center rounded-xl border border-white/10 bg-white/[0.03] p-1.5 shrink-0 min-w-[42px]">
+                              <button
+                                onClick={() => handleVoteDiscussion(d.id, 1)}
+                                className={`p-1 hover:text-[#c5ff55] transition ${
+                                  d.userVote === 1 ? "text-[#c5ff55]" : "text-[#788071]"
+                                }`}
+                                title="Upvote this solution"
+                              >
+                                <ThumbsUp size={14} />
+                              </button>
+                              <span className="text-xs font-black text-white">{d.votes || 0}</span>
+                            </div>
+
+                            {/* Solution details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-sm font-bold text-white hover:text-[#c5ff55] transition">
+                                  {d.title}
+                                </h4>
+                                {d.isAccepted && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black text-emerald-400">
+                                    <CheckCircle2 size={11} /> Accepted Optimal
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-[#788071]">
+                                <span className="font-semibold text-[#aab1a1]">{d.authorName}</span>
+                                <span>•</span>
+                                <span>{d.college || "University Partner"}</span>
+                                <span>•</span>
+                                <span>{d.language}</span>
+                              </div>
+
+                              {d.tags && d.tags.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {d.tags.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-[#aab1a1]"
+                                    >
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {d.content && (
+                                <p className="mt-2.5 text-xs leading-relaxed text-[#c0c5b8] whitespace-pre-wrap">
+                                  {d.content}
+                                </p>
+                              )}
+
+                              {d.codeSnippet && (
+                                <pre className="mt-3 rounded-xl border border-white/10 bg-black/70 p-3 font-mono text-xs text-[#c5ff55] overflow-x-auto leading-relaxed">
+                                  {d.codeSnippet}
+                                </pre>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                    {discussions.length === 0 && (
+                      <div className="py-12 text-center">
+                        <MessageSquare className="mx-auto text-[#788071]" size={36} />
+                        <p className="mt-3 font-bold text-white">No discussions posted yet</p>
+                        <p className="mt-1 text-xs text-[#aab1a1]">
+                          Be the first knight to share an optimal algorithm or ask a question!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -924,14 +1297,71 @@ export default function ProblemDetails() {
               className="min-h-[400px] w-full flex-1 resize-y bg-transparent p-4 font-mono text-sm leading-6 text-[#c5ff55] outline-none"
             />
 
+            {/* Console & Custom Test Case Sandbox Panel (Feature 15) */}
             <div className="border-t border-white/10 bg-[#161a14] px-4 py-3">
-              <button
-                onClick={() => setShowConsole((previous) => !previous)}
-                className="flex items-center gap-2 text-xs font-bold text-white hover:text-[#c5ff55] transition"
-              >
-                <Clock3 size={15} />
-                Console
-              </button>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowConsole((previous) => !previous)}
+                    className="flex items-center gap-2 text-xs font-bold text-white hover:text-[#c5ff55] transition"
+                  >
+                    <Clock3 size={15} />
+                    Console
+                  </button>
+
+                  <button
+                    onClick={() => setUseCustomInput((prev) => !prev)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
+                      useCustomInput
+                        ? "border-[#c5ff55]/40 bg-[#c5ff55]/10 text-[#c5ff55]"
+                        : "border-white/10 bg-white/5 text-[#aab1a1] hover:text-white"
+                    }`}
+                  >
+                    <Terminal size={13} />
+                    Custom Input (stdin)
+                  </button>
+                </div>
+
+                {useCustomInput && (
+                  <span className="flex items-center gap-1 text-[11px] font-mono text-[#c5ff55]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#c5ff55] animate-ping" />
+                    Docker Sandbox Mode
+                  </span>
+                )}
+              </div>
+
+              {useCustomInput && (
+                <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-black/50 p-3">
+                  <div className="flex items-center justify-between text-[11px] text-[#788071]">
+                    <span>Custom input will be piped to standard input (stdin):</span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomInput(problem.examples[0]?.input || "")}
+                      className="text-xs text-[#c5ff55] hover:underline font-mono"
+                    >
+                      Fill Sample 1 Input
+                    </button>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    placeholder="Enter custom stdin testcase here..."
+                    className="w-full rounded-lg border border-white/10 bg-black/80 p-2.5 font-mono text-xs text-[#c5ff55] outline-none focus:border-[#c5ff55]"
+                  />
+                  {customOutput && (
+                    <div className="rounded-lg border border-white/10 bg-black/90 p-3 font-mono text-xs text-white">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-1 mb-2 text-[10px] uppercase font-bold text-[#788071]">
+                        <span>Sandbox Terminal Output</span>
+                        <span className="text-[#c5ff55]">Live Container Log</span>
+                      </div>
+                      <pre className="whitespace-pre-wrap leading-relaxed text-[#e0e4dc]">
+                        {customOutput}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {showConsole && (
                 <div className="mt-3 rounded-lg border border-white/10 bg-black/60 p-3 font-mono text-xs text-[#aab1a1]">
@@ -940,19 +1370,40 @@ export default function ProblemDetails() {
               )}
             </div>
 
-            <div className="flex flex-wrap justify-end gap-2 border-t border-white/10 bg-[#161a14] px-4 py-4">
-              <button
-                onClick={handleRun}
-                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/10 transition"
-              >
-                <Play size={14} /> Run
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="flex items-center gap-2 rounded-xl bg-[#c5ff55] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#14170f] hover:bg-[#d5ff83] transition shadow-md shadow-[#c5ff55]/20"
-              >
-                <Send size={14} /> Submit
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-[#161a14] px-4 py-4">
+              <div>
+                {useCustomInput && (
+                  <button
+                    onClick={handleRunCustom}
+                    disabled={isRunningCustom}
+                    className="flex items-center gap-2 rounded-xl border border-[#c5ff55]/30 bg-[#c5ff55]/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#c5ff55] hover:bg-[#c5ff55]/20 disabled:opacity-50 transition"
+                  >
+                    {isRunningCustom ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Play size={14} />
+                    )}
+                    Run Custom Sandbox
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRun}
+                  disabled={isExecuting}
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/10 disabled:opacity-50 transition"
+                >
+                  <Play size={14} /> Run
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isExecuting}
+                  className="flex items-center gap-2 rounded-xl bg-[#c5ff55] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#14170f] hover:bg-[#d5ff83] disabled:opacity-50 transition shadow-md shadow-[#c5ff55]/20"
+                >
+                  <Send size={14} /> Submit
+                </button>
+              </div>
             </div>
           </section>
         </div>

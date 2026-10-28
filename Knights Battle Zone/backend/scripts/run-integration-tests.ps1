@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("all", "smoke", "core", "clubs", "marketplace", "placement", "stream", "security")]
+  [ValidateSet("all", "smoke", "core", "clubs", "placement", "stream", "security")]
   [string]$Suite = "all",
   [switch]$SkipDockerCheck,
   [switch]$SkipResources
@@ -178,7 +178,6 @@ function Get-TestsForSuite([string]$suiteName) {
   $suiteMap = @{
     core        = @("ControllerIntegrationTest")
     clubs       = @("ClubIntegrationTest")
-    marketplace = @("MarketplaceIntegrationTest")
     placement   = @("PlacementIntegrationTest")
     stream      = @("StreamIntegrationTest")
     security    = @("PlacementSecurityIntegrationTest")

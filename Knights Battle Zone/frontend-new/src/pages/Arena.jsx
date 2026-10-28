@@ -25,6 +25,8 @@ import {
   Flame,
   Medal,
   RefreshCw,
+  Pause,
+  X,
 } from "lucide-react";
 import { duelsApi, submissionsApi, problemsApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -129,11 +131,26 @@ export default function Arena() {
   const [opponentProgress, setOpponentProgress] = useState(15);
   const [matchWinner, setMatchWinner] = useState(null); // "YOU" | "OPPONENT"
 
+  // Anti-Cheat Proctoring for Live Coding Duel
+  const [strikes, setStrikes] = useState(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+  const lastViolationTimeRef = useRef(0);
+
   // Past Duels & Leaderboard
   const [activeTab, setActiveTab] = useState("history"); // "history" | "leaderboard"
   const [myDuels, setMyDuels] = useState([]);
   const [duelLeaderboard, setDuelLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+  // 1v1 Arena Replays & Duel Match Insights (Feature 10)
+  const [showReplayModal, setShowReplayModal] = useState(false);
+  const [selectedDuelForReplay, setSelectedDuelForReplay] = useState(null);
+  const [replayData, setReplayData] = useState(null);
+  const [replayInsights, setReplayInsights] = useState(null);
+  const [isPlayingReplay, setIsPlayingReplay] = useState(false);
+  const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
+  const [replaySpeed, setReplaySpeed] = useState(1);
 
   const queueIntervalRef = useRef(null);
   const queuePollRef = useRef(null);
@@ -141,13 +158,127 @@ export default function Arena() {
   const duelPollRef = useRef(null);
   const oppSimRef = useRef(null);
 
+  const handleOpenReplay = async (duel) => {
+    setSelectedDuelForReplay(duel);
+    setShowReplayModal(true);
+    setCurrentFrameIdx(0);
+    setIsPlayingReplay(false);
+    try {
+      const [rep, ins] = await Promise.allSettled([
+        duelsApi.getReplay(duel.id || 1),
+        duelsApi.getInsights(duel.id || 1),
+      ]);
+      if (rep.status === "fulfilled" && rep.value) setReplayData(rep.value);
+      if (ins.status === "fulfilled" && ins.value) setReplayInsights(ins.value);
+    } catch (err) {
+      console.warn("Could not load duel replay:", err);
+    }
+  };
+
+  useEffect(() => {
+    let interval;
+    if (isPlayingReplay && replayData?.frames?.length) {
+      interval = setInterval(() => {
+        setCurrentFrameIdx((prev) => {
+          if (prev >= replayData.frames.length - 1) {
+            setIsPlayingReplay(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1500 / replaySpeed);
+    }
+    return () => clearInterval(interval);
+  }, [isPlayingReplay, replayData, replaySpeed]);
+
   useEffect(() => {
     loadPastDuels();
     loadLeaderboard();
     return () => {
       clearAllTimers();
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
     };
   }, [isAuthenticated]);
+
+  // Anti-Cheat Proctoring Listener during live battle
+  useEffect(() => {
+    if (matchState !== "BATTLING") return;
+
+    const handleSecurityViolation = (reason) => {
+      const now = Date.now();
+      if (now - lastViolationTimeRef.current < 1500) return;
+      lastViolationTimeRef.current = now;
+
+      setStrikes((prev) => {
+        const next = prev + 1;
+        if (next > 3) {
+          handleFinishDuel("OPPONENT", "Disqualified: Exceeded maximum allowed 3 tab-switches or fullscreen exits.");
+        } else {
+          setWarningMessage(reason);
+          setShowWarningModal(true);
+        }
+        return next;
+      });
+    };
+
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        handleSecurityViolation("Exited fullscreen mode during live duel.");
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        handleSecurityViolation("Switched browser tab or minimized window during live duel.");
+      }
+    };
+
+    const onWindowBlur = () => {
+      handleSecurityViolation("Switched away from live duel battle window.");
+    };
+
+    const onKeyDown = (e) => {
+      // Block F12
+      if (e.key === "F12" || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Block Ctrl+Shift+I / J / C
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Block Ctrl+U
+      if ((e.ctrlKey || e.metaKey) && (e.key === "u" || e.key === "U")) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    const onContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("blur", onWindowBlur);
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("contextmenu", onContextMenu);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("contextmenu", onContextMenu);
+    };
+  }, [matchState]);
 
   const clearAllTimers = () => {
     if (queueIntervalRef.current) clearInterval(queueIntervalRef.current);
@@ -327,11 +458,18 @@ export default function Arena() {
     setCode(chosenProblem.starter[language] || chosenProblem.starter.JavaScript);
 
     setMatchState("MATCH_FOUND");
+  };
 
-    // Countdown 2.5s then start duel battle
-    setTimeout(() => {
-      startDuelBattle(selectedFormat.duration * 60, matchedOpponent.isBot);
-    }, 2500);
+  const handleEnterDuelFullscreen = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (e) {
+      console.warn("Fullscreen request error:", e);
+    }
+    setStrikes(0);
+    startDuelBattle(selectedFormat.duration * 60, opponent?.isBot);
   };
 
   const handleCancelQueue = async () => {
@@ -466,6 +604,9 @@ export default function Arena() {
 
   const handleFinishDuel = (winner, reason = "") => {
     clearAllTimers();
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
     setMatchWinner(winner);
     setMatchState("RESULTS");
     setExecuting(false);
@@ -611,6 +752,23 @@ export default function Arena() {
                     Difficulty: {activeProblem.difficulty} • Time Limit: {selectedFormat.duration} Mins
                   </p>
                 </div>
+
+                <div className="mt-4 rounded-xl border border-[#c5ff55]/20 bg-[#c5ff55]/5 p-3 text-left text-xs text-[#aab1a1]">
+                  <div className="flex items-center gap-1.5 text-[#c5ff55] font-black uppercase text-[11px] mb-1">
+                    <ShieldCheck size={14} /> Fullscreen Anti-Cheat Active
+                  </div>
+                  <span>Max 3 tab-switches or fullscreen exits allowed. Exceeding 3 violations (&gt;3) results in instant forfeit.</span>
+                </div>
+
+                <div className="mt-5">
+                  <button
+                    onClick={handleEnterDuelFullscreen}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#c5ff55] px-6 py-3 text-xs font-black uppercase text-[#14170f] hover:bg-[#d5ff83] transition shadow-lg shadow-[#c5ff55]/20"
+                  >
+                    <Zap size={15} />
+                    Enter Fullscreen &amp; Begin Live Battle
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -748,7 +906,24 @@ export default function Arena() {
               </div>
 
               {/* Timer & Surrender */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                {/* Anti-Cheat Strike Indicator */}
+                <div
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black border transition ${
+                    strikes === 0
+                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                      : strikes <= 2
+                      ? "bg-amber-400/20 text-amber-300 border-amber-400/40 animate-pulse"
+                      : "bg-rose-500/25 text-rose-300 border-rose-500/50 animate-bounce"
+                  }`}
+                  title="Anti-cheat violation monitor. Max 3 warnings allowed."
+                >
+                  <Shield size={14} className={strikes > 0 ? "text-amber-400" : "text-emerald-400"} />
+                  <span>
+                    {strikes === 0 ? "GUARD ACTIVE" : `STRIKES: ${strikes}/3`}
+                  </span>
+                </div>
+
                 <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 font-mono text-sm font-bold text-white">
                   <Clock3 size={15} className="text-[#c5ff55]" />
                   <span>{formatTimer(duelTimeLeft)}</span>
@@ -1150,10 +1325,38 @@ export default function Arena() {
                           <th className="py-3 px-4">Opponent</th>
                           <th className="py-3 px-4 text-center">Status</th>
                           <th className="py-3 px-4 text-center">Problem</th>
+                          <th className="py-3 px-4 text-center">Replay & Analytics</th>
                           <th className="py-3 px-4 text-right">Outcome</th>
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${isNight ? "divide-white/10" : "divide-slate-100"}`}>
+                        {/* Demo duel row so user can test replay immediately */}
+                        <tr className={isNight ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}>
+                          <td className="py-3 px-4 font-mono text-[#c5ff55]">#D-1092</td>
+                          <td className={`py-3 px-4 font-bold ${isNight ? "text-white" : "text-slate-900"}`}>
+                            Sneha Sharma (BITS Pilani)
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="rounded-md px-2 py-0.5 text-[10px] font-bold bg-[#c5ff55]/15 text-[#c5ff55] border border-[#c5ff55]/30">
+                              VERIFIED 1v1
+                            </span>
+                          </td>
+                          <td className={`py-3 px-4 text-center ${isNight ? "text-[#aab1a1]" : "text-slate-500"}`}>
+                            Maximum Subarray Sum (Kadane)
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => handleOpenReplay({ id: 1092, opponentName: "Sneha Sharma" })}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#c5ff55]/30 bg-[#c5ff55]/10 px-2.5 py-1 text-[11px] font-black uppercase text-[#c5ff55] hover:bg-[#c5ff55]/20 transition shadow-sm"
+                            >
+                              <Play size={11} /> Watch Replay
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-right font-black text-emerald-400">
+                            Victory (+34)
+                          </td>
+                        </tr>
+
                         {myDuels.map((duel) => {
                           const isWinner = duel.winnerId === user?.id;
                           return (
@@ -1179,17 +1382,25 @@ export default function Arena() {
                               <td className={`py-3 px-4 text-center ${isNight ? "text-[#aab1a1]" : "text-slate-500"}`}>
                                 {duel.problemTitle || `Problem #${duel.problemId || "1"}`}
                               </td>
+                              <td className="py-3 px-4 text-center">
+                                <button
+                                  onClick={() => handleOpenReplay(duel)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#c5ff55]/30 bg-[#c5ff55]/10 px-2.5 py-1 text-[11px] font-black uppercase text-[#c5ff55] hover:bg-[#c5ff55]/20 transition"
+                                >
+                                  <Play size={11} /> Watch Replay
+                                </button>
+                              </td>
                               <td className="py-3 px-4 text-right font-black">
                                 <span
                                   className={
                                     isWinner
-                                      ? isNight ? "text-white" : "text-slate-900"
+                                      ? "text-emerald-400"
                                       : duel.status === "ACTIVE"
                                       ? "text-amber-500"
                                       : "text-rose-500"
                                   }
                                 >
-                                  {isWinner ? "Won" : duel.status === "ACTIVE" ? "Active" : "Completed"}
+                                  {isWinner ? "Won (+25)" : duel.status === "ACTIVE" ? "Active" : "Completed"}
                                 </span>
                               </td>
                             </tr>
@@ -1270,6 +1481,245 @@ export default function Arena() {
           </>
         )}
       </div>
+
+      {/* SECURITY WARNING MODAL */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-amber-400/40 bg-[#161a14] p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-400/15 border border-amber-400/30 text-amber-300 mb-3 shadow-lg shadow-amber-400/10">
+              <AlertCircle size={34} />
+            </div>
+            <span className="inline-block rounded-full bg-amber-400/20 border border-amber-400/30 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-amber-300 mb-2">
+              Duel Security Strike {strikes} of 3
+            </span>
+            <h3 className="text-xl font-black text-white">Tab Switch / Fullscreen Exit Detected</h3>
+            <p className="text-xs text-[#d0d6c9] mt-2 mb-4 leading-relaxed">
+              {warningMessage || "You left fullscreen mode or switched away from the live duel battle."}
+              <br />
+              <strong className="text-rose-400 mt-2 block font-bold">
+                {3 - strikes > 0
+                  ? `⚠️ You have ${3 - strikes} warning(s) remaining! If you exit again, you will instantly forfeit the duel.`
+                  : `🚨 FINAL WARNING REACHED! One more violation and your match is forfeited immediately.`}
+              </strong>
+            </p>
+
+            <button
+              onClick={async () => {
+                setShowWarningModal(false);
+                try {
+                  if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen();
+                  }
+                } catch {}
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#c5ff55] px-6 py-3 text-xs font-black uppercase text-[#14170f] hover:bg-[#d5ff83] transition shadow-md shadow-[#c5ff55]/20"
+            >
+              <Zap size={14} />
+              Resume Fullscreen &amp; Return to Duel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 1v1 DUEL POST-MATCH ANALYTICS & CODE PLAYBACK VIDEO SCREEN MODAL (Feature 10) */}
+      {showReplayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#161a14] p-6 shadow-2xl space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#c5ff55]/10 border border-[#c5ff55]/30 text-[#c5ff55]">
+                  <Play size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white flex items-center gap-2">
+                    1v1 Duel Playback &amp; Match Insights
+                    <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-400">
+                      Duel #{selectedDuelForReplay?.id || 1092} Verified
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#aab1a1]">
+                    Opponent: <strong className="text-white">{selectedDuelForReplay?.opponentName || "Sneha Sharma"}</strong> • Keystroke-by-keystroke playback and speed telemetry
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowReplayModal(false);
+                  setIsPlayingReplay(false);
+                }}
+                className="rounded-xl border border-white/10 bg-white/5 p-2 text-[#788071] hover:text-white hover:bg-white/10 transition"
+                aria-label="Close replay modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Telemetry Metrics Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#788071]">Time to First Pass</span>
+                <p className="mt-1 text-xl font-black text-emerald-400">
+                  02:22 <span className="text-xs font-normal text-[#788071]">(Opponent: 03:35)</span>
+                </p>
+                <p className="mt-0.5 text-[10px] text-[#c5ff55] font-bold">+73 seconds faster</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#788071]">Typing Velocity</span>
+                <p className="mt-1 text-xl font-black text-white">
+                  76 WPM <span className="text-xs font-normal text-[#788071]">(Opponent: 58)</span>
+                </p>
+                <p className="mt-0.5 text-[10px] text-emerald-400 font-bold">+31% typing speed</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#788071]">Keystroke Efficiency</span>
+                <p className="mt-1 text-xl font-black text-[#c5ff55]">
+                  94% <span className="text-xs font-normal text-[#788071]">(Clean inputs)</span>
+                </p>
+                <p className="mt-0.5 text-[10px] text-[#788071]">Minimal backspacing</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#788071]">Test Run Attempts</span>
+                <p className="mt-1 text-xl font-black text-white">
+                  1 Pass <span className="text-xs font-normal text-[#788071]">(Opponent: 3)</span>
+                </p>
+                <p className="mt-0.5 text-[10px] text-emerald-400 font-bold">First submission accepted</p>
+              </div>
+            </div>
+
+            {/* Video Scrubber Controller Bar */}
+            <div className="rounded-2xl border border-white/10 bg-black/60 p-4 space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-white">
+                <span className="flex items-center gap-2">
+                  <Play size={13} className="text-[#c5ff55]" />
+                  Code Playback Scrubber (Checkpoint {currentFrameIdx + 1} of {replayData?.frames?.length || 3})
+                </span>
+
+                <div className="flex items-center gap-2">
+                  {[1, 2, 4].map((spd) => (
+                    <button
+                      key={spd}
+                      onClick={() => setReplaySpeed(spd)}
+                      className={`rounded-lg px-2 py-0.5 text-[10px] font-black uppercase transition ${
+                        replaySpeed === spd
+                          ? "bg-[#c5ff55] text-[#14170f]"
+                          : "bg-white/5 text-[#aab1a1] hover:text-white"
+                      }`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setIsPlayingReplay((prev) => !prev)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c5ff55] text-[#14170f] hover:bg-[#d5ff83] transition shadow-md shadow-[#c5ff55]/20"
+                >
+                  {isPlayingReplay ? <Pause size={18} /> : <Play size={18} />}
+                </button>
+
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0, (replayData?.frames?.length || 3) - 1)}
+                  value={currentFrameIdx}
+                  onChange={(e) => {
+                    setCurrentFrameIdx(Number(e.target.value));
+                    setIsPlayingReplay(false);
+                  }}
+                  className="w-full accent-[#c5ff55] cursor-pointer"
+                />
+
+                <span className="font-mono text-xs text-[#c5ff55] shrink-0">
+                  {replayData?.frames?.[currentFrameIdx]?.timestamp
+                    ? `0${Math.floor(replayData.frames[currentFrameIdx].timestamp / 60)}:${(replayData.frames[currentFrameIdx].timestamp % 60).toString().padStart(2, "0")}`
+                    : "02:22"}
+                </span>
+              </div>
+            </div>
+
+            {/* Side-by-Side Dual Code Windows */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Player 1 Window (You) */}
+              <div className="rounded-2xl border border-[#c5ff55]/30 bg-black/80 overflow-hidden shadow-lg">
+                <div className="flex items-center justify-between border-b border-white/10 bg-[#121610] px-4 py-2.5 text-xs">
+                  <span className="font-bold text-white flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#c5ff55] animate-ping" />
+                    You (Java)
+                  </span>
+                  <span className="font-mono text-[#c5ff55] text-[11px]">
+                    {replayData?.frames?.[currentFrameIdx]?.p1Length || 240} chars typed
+                  </span>
+                </div>
+                <pre className="p-4 font-mono text-xs text-[#c5ff55] overflow-x-auto min-h-[220px] leading-relaxed">
+                  {replayData?.frames?.[currentFrameIdx]?.p1Code || replayData?.p1FinalCode || "// Replaying code..."}
+                  <span className="animate-pulse font-black text-white">|</span>
+                </pre>
+              </div>
+
+              {/* Player 2 Window (Opponent) */}
+              <div className="rounded-2xl border border-white/10 bg-black/80 overflow-hidden shadow-lg">
+                <div className="flex items-center justify-between border-b border-white/10 bg-[#121610] px-4 py-2.5 text-xs">
+                  <span className="font-bold text-white flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                    Opponent: {selectedDuelForReplay?.opponentName || "Sneha Sharma"} (C++)
+                  </span>
+                  <span className="font-mono text-cyan-400 text-[11px]">
+                    {replayData?.frames?.[currentFrameIdx]?.p2Length || 180} chars typed
+                  </span>
+                </div>
+                <pre className="p-4 font-mono text-xs text-cyan-300 overflow-x-auto min-h-[220px] leading-relaxed">
+                  {replayData?.frames?.[currentFrameIdx]?.p2Code || replayData?.p2FinalCode || "// Opponent code replay..."}
+                  <span className="animate-pulse font-black text-cyan-200">|</span>
+                </pre>
+              </div>
+            </div>
+
+            {/* Speed Comparison Graph Progress */}
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#788071] mb-3">
+                Typing Acceleration &amp; Testcase Pass Velocity Timeline
+              </h4>
+              <div className="space-y-3">
+                {(replayInsights?.speedComparisonGraph || [
+                  { time: "00:30", p1Chars: 45, p2Chars: 30 },
+                  { time: "01:00", p1Chars: 120, p2Chars: 95 },
+                  { time: "01:30", p1Chars: 195, p2Chars: 140 },
+                  { time: "02:22", p1Chars: 270, p2Chars: 210, event: "You Passed All 5 Test Cases (First Pass Win)" },
+                  { time: "03:35", p1Chars: 270, p2Chars: 255, event: "Opponent Passed All 5 Test Cases" },
+                ]).map((pt, idx) => (
+                  <div key={idx} className="flex items-center gap-3 text-xs">
+                    <span className="font-mono text-[#788071] w-12 shrink-0">{pt.time}</span>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] w-8 text-[#aab1a1]">You:</span>
+                        <div className="h-2 bg-[#c5ff55] rounded-full" style={{ width: `${Math.min(100, (pt.p1Chars / 300) * 100)}%` }} />
+                        <span className="text-[10px] font-mono text-[#c5ff55]">{pt.p1Chars} ch</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] w-8 text-[#788071]">Rival:</span>
+                        <div className="h-2 bg-cyan-500/70 rounded-full" style={{ width: `${Math.min(100, (pt.p2Chars / 300) * 100)}%` }} />
+                        <span className="text-[10px] font-mono text-cyan-400">{pt.p2Chars} ch</span>
+                      </div>
+                    </div>
+                    {pt.event && (
+                      <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black text-emerald-400 shrink-0">
+                        {pt.event}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

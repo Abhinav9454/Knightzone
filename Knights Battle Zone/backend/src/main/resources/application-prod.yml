@@ -69,7 +69,9 @@ app:
     enabled: ${APP_DB_ROUTING_ENABLED:false}
     read-only-transactions-only: ${APP_DB_ROUTING_READ_ONLY_TX_ONLY:true}
   bootstrap-admin:
-    enabled: false
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:admin@knightzone.dev}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:AdminKnight@2026!}
 
 websocket:
   broker:

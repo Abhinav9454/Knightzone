@@ -110,8 +110,13 @@ services:
       JUDGE_INTERNAL_TOKEN: "${JUDGE_INTERNAL_TOKEN:?Error: Set JUDGE_INTERNAL_TOKEN in .env}"
       JUDGE_SERVICE_URL: "http://localhost:8080/api"
       JUDGE_DOCKER_ENABLED: "true"
-      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://frontend:80"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://frontend:80"
       SERVER_PORT: "8080"
+      BOOTSTRAP_ADMIN_ENABLED: "${BOOTSTRAP_ADMIN_ENABLED:-true}"
+      BOOTSTRAP_ADMIN_EMAIL: "${BOOTSTRAP_ADMIN_EMAIL:-admin@knightzone.dev}"
+      BOOTSTRAP_ADMIN_PASSWORD: "${BOOTSTRAP_ADMIN_PASSWORD:-AdminKnight@2026!}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@knightzone.dev}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
     ports:
       - "8080:8080"
     volumes:

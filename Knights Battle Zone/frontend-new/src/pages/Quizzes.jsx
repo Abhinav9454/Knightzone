@@ -19,7 +19,7 @@ import {
   Check,
   Zap,
 } from "lucide-react";
-import { quizzesApi } from "../services/api";
+import { quizzesApi, adminApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { KnightCrest, TrophyIllustration, RankBadge } from "../components/svg";
@@ -35,7 +35,7 @@ export default function Quizzes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState(null);
 
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -282,10 +282,22 @@ export default function Quizzes() {
                     <div>
                       {/* Header tags */}
                       <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#c5ff55] bg-white/5 border border-white/10 px-2.5 py-1 rounded-md">
-                          <Clock size={12} />
-                          {quiz.durationMinutes || 15} Mins
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#c5ff55] bg-white/5 border border-white/10 px-2.5 py-1 rounded-md">
+                            <Clock size={12} />
+                            {quiz.durationMinutes || 15} Mins
+                          </span>
+
+                          {quiz.endTime && new Date(quiz.endTime) < new Date() ? (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                              COMPLETED
+                            </span>
+                          ) : quiz.startTime && quiz.endTime && new Date(quiz.startTime) <= new Date() && new Date(quiz.endTime) >= new Date() ? (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 animate-pulse">
+                              ● LIVE
+                            </span>
+                          ) : null}
+                        </div>
 
                         <span
                           className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
@@ -340,6 +352,61 @@ export default function Quizzes() {
                         <ArrowRight size={14} />
                       </button>
                     </div>
+
+                    {/* Admin 1-Click Revive for Completed Quizzes */}
+                    {isAdmin && quiz.endTime && new Date(quiz.endTime) < new Date() && (
+                      <div className="flex items-center justify-between gap-1.5 mt-2.5 pt-2 border-t border-white/10">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                          <Zap size={11} className="text-[#c5ff55]" /> Admin Revive:
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const now = new Date();
+                                await adminApi.updateQuiz(quiz.id, {
+                                  title: quiz.title,
+                                  description: quiz.description || "",
+                                  startTime: new Date(now.getTime() - 60000).toISOString(),
+                                  endTime: new Date(now.getTime() + 3600000).toISOString(),
+                                  durationMinutes: 60,
+                                });
+                                alert("⚡ Quiz is now LIVE for 1 hour!");
+                                loadData();
+                              } catch (e) {
+                                alert("Failed to revive quiz: " + (e.response?.data?.message || e.message));
+                              }
+                            }}
+                            className="rounded-lg bg-[#c5ff55] px-2 py-0.5 text-[10px] font-black text-[#14170f] hover:bg-[#d5ff83] transition"
+                            title="Make live for 1 hour"
+                          >
+                            ⚡ +1h
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const now = new Date();
+                                await adminApi.updateQuiz(quiz.id, {
+                                  title: quiz.title,
+                                  description: quiz.description || "",
+                                  startTime: new Date(now.getTime() - 60000).toISOString(),
+                                  endTime: new Date(now.getTime() + 7200000).toISOString(),
+                                  durationMinutes: 120,
+                                });
+                                alert("⚡ Quiz is now LIVE for 2 hours!");
+                                loadData();
+                              } catch (e) {
+                                alert("Failed to revive quiz: " + (e.response?.data?.message || e.message));
+                              }
+                            }}
+                            className="rounded-lg bg-[#c5ff55] px-2 py-0.5 text-[10px] font-black text-[#14170f] hover:bg-[#d5ff83] transition"
+                            title="Make live for 2 hours"
+                          >
+                            ⚡ +2h
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

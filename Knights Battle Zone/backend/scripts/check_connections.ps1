@@ -237,15 +237,13 @@ function Check-ModuleApiHealth([string]$token) {
     return @(
       @{name='API:Placement'; ok=$false; msg='Skipped: no auth token'}
       @{name='API:Clubs'; ok=$false; msg='Skipped: no auth token'}
-      @{name='API:Marketplace'; ok=$false; msg='Skipped: no auth token'}
     )
   }
 
   $headers = @{ Authorization = "Bearer $token" }
   $checks = @(
     @{name='API:Placement'; url="http://localhost:$backendPort/api/placement/jobs"; expected=@(200)},
-    @{name='API:Clubs'; url="http://localhost:$backendPort/api/clubs"; expected=@(200)},
-    @{name='API:Marketplace'; url="http://localhost:$backendPort/api/passages?sort=new&page=0&size=5"; expected=@(200)}
+    @{name='API:Clubs'; url="http://localhost:$backendPort/api/clubs"; expected=@(200)}
   )
 
   $resultsList = @()
